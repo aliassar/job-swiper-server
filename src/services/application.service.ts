@@ -73,14 +73,14 @@ export const applicationService = {
   async updateApplicationStage(
     userId: string,
     applicationId: string,
-    stage: string
+    stage: 'Syncing' | 'Being Applied' | 'Applied' | 'Phone Screen' | 'Interview' | 'Offer' | 'Rejected' | 'Accepted' | 'Withdrawn'
   ) {
     const application = await this.getApplicationById(userId, applicationId);
 
     await db
       .update(applications)
       .set({
-        stage: stage as any,
+        stage: stage,
         lastUpdated: new Date(),
         updatedAt: new Date(),
       })

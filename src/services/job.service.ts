@@ -79,7 +79,7 @@ export const jobService = {
     userId: string,
     jobId: string,
     status: 'pending' | 'accepted' | 'rejected' | 'skipped',
-    actionType: string
+    actionType: 'accepted' | 'rejected' | 'skipped' | 'saved' | 'unsaved' | 'rollback' | 'report' | 'unreport'
   ) {
     const job = await this.getJobWithStatus(userId, jobId);
 
@@ -110,8 +110,8 @@ export const jobService = {
     await db.insert(actionHistory).values({
       userId,
       jobId,
-      actionType: actionType as any,
-      previousStatus: job.status as any,
+      actionType: actionType,
+      previousStatus: job.status,
       newStatus: status,
       metadata: {},
     });
