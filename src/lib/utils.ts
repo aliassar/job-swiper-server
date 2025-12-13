@@ -26,5 +26,8 @@ export function parseIntSafe(value: string | undefined, defaultValue: number): n
 
 export function parseBoolSafe(value: string | undefined, defaultValue: boolean): boolean {
   if (!value) return defaultValue;
-  return value.toLowerCase() === 'true';
+  const lower = value.toLowerCase();
+  if (lower === 'true') return true;
+  if (lower === 'false') return false;
+  return defaultValue;
 }
