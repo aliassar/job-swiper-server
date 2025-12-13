@@ -1,0 +1,56 @@
+import { Hono } from 'hono';
+import { AppContext } from '../types';
+import { authMiddleware } from '../middleware/auth';
+import jobs from './jobs';
+import applications from './applications';
+import saved from './saved';
+import reported from './reported';
+import history from './history';
+import settings from './settings';
+import resumes from './resumes';
+import generation from './generation';
+import emailSync from './email-sync';
+import users from './users';
+import sync from './sync';
+
+const api = new Hono<AppContext>();
+
+// Health check (no auth required)
+api.get('/health', (c) => {
+  return c.json({
+    success: true,
+    data: {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+    },
+  });
+});
+
+// Sync endpoint (no auth required for cron)
+api.route('/sync', sync);
+
+// All other routes require authentication
+api.use('/jobs/*', authMiddleware);
+api.use('/applications/*', authMiddleware);
+api.use('/saved/*', authMiddleware);
+api.use('/reported/*', authMiddleware);
+api.use('/history/*', authMiddleware);
+api.use('/settings/*', authMiddleware);
+api.use('/resumes/*', authMiddleware);
+api.use('/generated/*', authMiddleware);
+api.use('/email/*', authMiddleware);
+api.use('/users/*', authMiddleware);
+
+// Mount routes
+api.route('/jobs', jobs);
+api.route('/applications', applications);
+api.route('/saved', saved);
+api.route('/reported', reported);
+api.route('/history', history);
+api.route('/settings', settings);
+api.route('/resumes', resumes);
+api.route('/', generation); // Generation routes are mounted at root for /jobs/:id/generate/*
+api.route('/email', emailSync);
+api.route('/users', users);
+
+export default api;
