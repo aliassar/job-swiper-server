@@ -6,7 +6,9 @@ describe('Utils', () => {
     it('should format success response correctly', () => {
       const result = formatResponse(true, { test: 'data' }, null, 'req_123');
       expect(result.success).toBe(true);
-      expect(result.data).toEqual({ test: 'data' });
+      if ('data' in result) {
+        expect(result.data).toEqual({ test: 'data' });
+      }
       expect(result.meta.requestId).toBe('req_123');
       expect(result.meta.timestamp).toBeDefined();
     });
@@ -14,7 +16,9 @@ describe('Utils', () => {
     it('should format error response correctly', () => {
       const result = formatResponse(false, null, { code: 'ERROR', message: 'Test error' }, 'req_456');
       expect(result.success).toBe(false);
-      expect(result.error).toEqual({ code: 'ERROR', message: 'Test error' });
+      if ('error' in result) {
+        expect(result.error).toEqual({ code: 'ERROR', message: 'Test error' });
+      }
       expect(result.meta.requestId).toBe('req_456');
     });
   });

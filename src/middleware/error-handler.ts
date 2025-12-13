@@ -8,13 +8,14 @@ export async function errorHandler(err: Error, c: Context) {
   const requestId = c.get('requestId') || 'unknown';
 
   if (err instanceof AppError) {
+    const statusCode = err.statusCode >= 100 && err.statusCode < 600 ? err.statusCode : 500;
     return c.json(
       formatResponse(false, null, {
         code: err.code,
         message: err.message,
         details: err.details,
       }, requestId),
-      err.statusCode
+      statusCode as any
     );
   }
 
@@ -24,6 +25,6 @@ export async function errorHandler(err: Error, c: Context) {
       code: 'INTERNAL_SERVER_ERROR',
       message: 'An unexpected error occurred',
     }, requestId),
-    500
+    500 as any
   );
 }
