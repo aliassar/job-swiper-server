@@ -3,7 +3,7 @@ import { AppContext } from '../types';
 import { db } from '../lib/db';
 import { reportedJobs, jobs } from '../db/schema';
 import { formatResponse, parseIntSafe } from '../lib/utils';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 
 const reported = new Hono<AppContext>();
 

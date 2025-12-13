@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { AppContext } from '../types';
 import { resumeService } from '../services/resume.service';
 import { formatResponse } from '../lib/utils';

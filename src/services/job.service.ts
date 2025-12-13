@@ -1,11 +1,11 @@
 import { db } from '../lib/db';
 import { jobs, userJobStatus, actionHistory } from '../db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, like, or } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors';
 
 export const jobService = {
   async getPendingJobs(userId: string, search?: string, limit: number = 10) {
-    const query = db
+    const baseQuery = db
       .select({
         id: jobs.id,
         company: jobs.company,
@@ -27,11 +27,21 @@ export const jobService = {
       })
       .from(jobs)
       .leftJoin(userJobStatus, and(eq(userJobStatus.jobId, jobs.id), eq(userJobStatus.userId, userId)))
-      .where(sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`)
-      .orderBy(desc(jobs.createdAt))
-      .limit(limit);
+      .$dynamic();
 
-    return await query;
+    let query = baseQuery.where(sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`);
+
+    // Add search if provided
+    if (search) {
+      query = query.where(
+        or(
+          like(jobs.company, `%${search}%`),
+          like(jobs.position, `%${search}%`)
+        )
+      );
+    }
+
+    return await query.orderBy(desc(jobs.createdAt)).limit(limit);
   },
 
   async getJobWithStatus(userId: string, jobId: string) {
@@ -68,7 +78,7 @@ export const jobService = {
   async updateJobStatus(
     userId: string,
     jobId: string,
-    status: 'accepted' | 'rejected' | 'skipped',
+    status: 'pending' | 'accepted' | 'rejected' | 'skipped',
     actionType: string
   ) {
     const job = await this.getJobWithStatus(userId, jobId);
