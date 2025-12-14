@@ -330,13 +330,26 @@ export const jobService = {
 
     const userPrefs = settings[0];
 
-    // Create application record
+    // Create application record or get existing one
     let application;
-    try {
-      application = await applicationService.createApplication(userId, jobId);
-    } catch (error) {
-      // Application might already exist, continue
-      logger.error({ error, userId, jobId }, 'Error creating application during job acceptance');
+    
+    // Check if application already exists
+    const existingApplications = await db
+      .select()
+      .from(applications)
+      .where(and(eq(applications.userId, userId), eq(applications.jobId, jobId)))
+      .limit(1);
+    
+    if (existingApplications.length > 0) {
+      application = existingApplications[0];
+    } else {
+      try {
+        application = await applicationService.createApplication(userId, jobId);
+      } catch (error) {
+        logger.error({ error, userId, jobId }, 'Failed to create application during job acceptance');
+        // If we can't create an application, we can't auto-generate, so return early
+        return job;
+      }
     }
 
     // Auto-generate resume if enabled
