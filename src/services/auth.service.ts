@@ -12,14 +12,15 @@ export const authService = {
     expiresAt.setHours(expiresAt.getHours() + 1); // Token valid for 1 hour
 
     // In a real implementation, you would:
-    // 1. Look up the user by email
-    // 2. Store the token in the database with the userId
-    // 3. Send an email with the reset link
+    // 1. Look up the user by email in the auth provider (NextAuth/etc)
+    // 2. Store the token in the database with the actual userId
+    // 3. Send an email with the reset link containing the token
     
     // For now, we'll store the token with the email as userId
     // since we don't have a users table in this schema
+    // SECURITY NOTE: In production, this must be replaced with actual userId lookup
     await db.insert(passwordResetTokens).values({
-      userId: email, // In production, this would be the actual userId
+      userId: email, // TEMPORARY: In production, this would be the actual userId from auth provider
       token,
       expiresAt,
       used: false,
@@ -28,7 +29,8 @@ export const authService = {
     // TODO: Send email with reset link
     // await emailClient.sendPasswordResetEmail(email, token, requestId);
 
-    return { token }; // Return token for testing, don't return in production
+    // SECURITY: Never return the token in production - it should only be sent via email
+    return { message: 'Password reset email sent if account exists' };
   },
 
   async resetPassword(token: string, _newPassword: string) {
