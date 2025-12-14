@@ -74,4 +74,15 @@ resumes.patch('/:id/primary', async (c) => {
   return c.json(formatResponse(true, resume, null, requestId));
 });
 
+// PATCH /api/resumes/:id/reference - Set as reference
+resumes.patch('/:id/reference', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const resumeId = c.req.param('id');
+
+  const resume = await resumeService.setReference(auth.userId, resumeId);
+
+  return c.json(formatResponse(true, resume, null, requestId));
+});
+
 export default resumes;
