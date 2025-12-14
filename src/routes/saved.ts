@@ -11,8 +11,9 @@ saved.get('/', async (c) => {
   const requestId = c.get('requestId');
   const page = parseIntSafe(c.req.query('page'), 1);
   const limit = parseIntSafe(c.req.query('limit'), 20);
+  const search = c.req.query('search');
 
-  const result = await jobService.getSavedJobs(auth.userId, page, limit);
+  const result = await jobService.getSavedJobs(auth.userId, page, limit, search);
 
   return c.json(formatResponse(true, result, null, requestId));
 });

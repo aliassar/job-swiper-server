@@ -36,6 +36,10 @@ export const userSettings = pgTable('user_settings', {
   emailNotifications: boolean('email_notifications').notNull().default(true),
   pushNotifications: boolean('push_notifications').notNull().default(true),
   automationStages: jsonb('automation_stages').notNull().default([]),
+  autoGenerateResume: boolean('auto_generate_resume').notNull().default(false),
+  autoGenerateCoverLetter: boolean('auto_generate_cover_letter').notNull().default(false),
+  autoGenerateEmail: boolean('auto_generate_email').notNull().default(false),
+  aiFilteringEnabled: boolean('ai_filtering_enabled').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -47,6 +51,7 @@ export const resumeFiles = pgTable('resume_files', {
   filename: text('filename').notNull(),
   fileUrl: text('file_url').notNull(),
   isPrimary: boolean('is_primary').notNull().default(false),
+  isReference: boolean('is_reference').notNull().default(false),
   uploadedAt: timestamp('uploaded_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -155,6 +160,7 @@ export const generatedCoverLetters = pgTable('generated_cover_letters', {
   applicationId: uuid('application_id').references(() => applications.id, { onDelete: 'cascade' }),
   fileUrl: text('file_url').notNull(),
   filename: text('filename').notNull(),
+  isReference: boolean('is_reference').notNull().default(false),
   generatedAt: timestamp('generated_at').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
@@ -169,6 +175,16 @@ export const auditLogs = pgTable('audit_logs', {
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
   metadata: jsonb('metadata').notNull().default({}),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// Password reset tokens table
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: text('user_id').notNull(),
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  used: boolean('used').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

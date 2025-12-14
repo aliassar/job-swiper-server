@@ -74,11 +74,37 @@ export const resumeService = {
     return await this.getResumeById(userId, resumeId);
   },
 
+  async setReference(userId: string, resumeId: string) {
+    // First, unset all reference flags for this user
+    await db
+      .update(resumeFiles)
+      .set({ isReference: false, updatedAt: new Date() })
+      .where(eq(resumeFiles.userId, userId));
+
+    // Then set the specified resume as reference
+    await db
+      .update(resumeFiles)
+      .set({ isReference: true, updatedAt: new Date() })
+      .where(eq(resumeFiles.id, resumeId));
+
+    return await this.getResumeById(userId, resumeId);
+  },
+
   async getPrimaryResume(userId: string) {
     const result = await db
       .select()
       .from(resumeFiles)
       .where(and(eq(resumeFiles.userId, userId), eq(resumeFiles.isPrimary, true)))
+      .limit(1);
+
+    return result.length > 0 ? result[0] : null;
+  },
+
+  async getReferenceResume(userId: string) {
+    const result = await db
+      .select()
+      .from(resumeFiles)
+      .where(and(eq(resumeFiles.userId, userId), eq(resumeFiles.isReference, true)))
       .limit(1);
 
     return result.length > 0 ? result[0] : null;
