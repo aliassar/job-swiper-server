@@ -88,3 +88,8 @@ export const emailSyncClient = new MicroserviceClient({
   baseUrl: process.env.EMAIL_SYNC_SERVICE_URL || '',
   apiKey: process.env.EMAIL_SYNC_SERVICE_KEY || '',
 });
+
+export const aiFilteringClient = new MicroserviceClient({
+  baseUrl: process.env.AI_FILTERING_SERVICE_URL || '',
+  apiKey: process.env.AI_FILTERING_SERVICE_KEY || '',
+});

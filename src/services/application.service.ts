@@ -1,11 +1,23 @@
 import { db } from '../lib/db';
 import { applications, jobs, actionHistory } from '../db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, or, like, SQL } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors';
 
 export const applicationService = {
-  async getApplications(userId: string, page: number = 1, limit: number = 20) {
+  async getApplications(userId: string, page: number = 1, limit: number = 20, search?: string) {
     const offset = (page - 1) * limit;
+
+    let whereConditions: SQL<unknown> | undefined = eq(applications.userId, userId);
+    
+    if (search) {
+      whereConditions = and(
+        whereConditions,
+        or(
+          like(jobs.company, `%${search}%`),
+          like(jobs.position, `%${search}%`)
+        )
+      );
+    }
 
     const items = await db
       .select({
@@ -21,15 +33,28 @@ export const applicationService = {
       })
       .from(applications)
       .innerJoin(jobs, eq(jobs.id, applications.jobId))
-      .where(eq(applications.userId, userId))
+      .where(whereConditions)
       .orderBy(desc(applications.lastUpdated))
       .limit(limit)
       .offset(offset);
 
+    let countWhereConditions: SQL<unknown> | undefined = eq(applications.userId, userId);
+    
+    if (search) {
+      countWhereConditions = and(
+        countWhereConditions,
+        sql`EXISTS (
+          SELECT 1 FROM ${jobs} 
+          WHERE ${jobs.id} = ${applications.jobId} 
+          AND (${like(jobs.company, `%${search}%`)} OR ${like(jobs.position, `%${search}%`)})
+        )`
+      );
+    }
+
     const totalResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(applications)
-      .where(eq(applications.userId, userId));
+      .where(countWhereConditions);
 
     const total = Number(totalResult[0]?.count || 0);
 
