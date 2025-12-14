@@ -3,7 +3,7 @@ import { AppContext } from '../types';
 import { db } from '../lib/db';
 import { reportedJobs, jobs } from '../db/schema';
 import { formatResponse, parseIntSafe } from '../lib/utils';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, and, or, like, SQL } from 'drizzle-orm';
 
 const reported = new Hono<AppContext>();
 
@@ -13,8 +13,11 @@ reported.get('/', async (c) => {
   const requestId = c.get('requestId');
   const page = parseIntSafe(c.req.query('page'), 1);
   const limit = parseIntSafe(c.req.query('limit'), 20);
+  const search = c.req.query('search');
 
   const offset = (page - 1) * limit;
+
+  let whereConditions = eq(reportedJobs.userId, auth.userId);
 
   const items = await db
     .select({
@@ -29,15 +32,35 @@ reported.get('/', async (c) => {
     })
     .from(reportedJobs)
     .innerJoin(jobs, eq(jobs.id, reportedJobs.jobId))
-    .where(eq(reportedJobs.userId, auth.userId))
+    .where(
+      search
+        ? and(
+            whereConditions,
+            or(like(jobs.company, `%${search}%`), like(jobs.position, `%${search}%`))
+          )
+        : whereConditions
+    )
     .orderBy(desc(reportedJobs.reportedAt))
     .limit(limit)
     .offset(offset);
 
+  let countWhereConditions: SQL<unknown> | undefined = eq(reportedJobs.userId, auth.userId);
+
+  if (search) {
+    countWhereConditions = and(
+      countWhereConditions,
+      sql`EXISTS (
+        SELECT 1 FROM ${jobs} 
+        WHERE ${jobs.id} = ${reportedJobs.jobId} 
+        AND (${like(jobs.company, `%${search}%`)} OR ${like(jobs.position, `%${search}%`)})
+      )`
+    );
+  }
+
   const totalResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(reportedJobs)
-    .where(eq(reportedJobs.userId, auth.userId));
+    .where(countWhereConditions);
 
   const total = Number(totalResult[0]?.count || 0);
 

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
+import auth from './auth';
 import jobs from './jobs';
 import applications from './applications';
 import saved from './saved';
@@ -8,6 +9,7 @@ import reported from './reported';
 import history from './history';
 import settings from './settings';
 import resumes from './resumes';
+import coverLetters from './cover-letters';
 import generation from './generation';
 import emailSync from './email-sync';
 import users from './users';
@@ -29,6 +31,9 @@ api.get('/health', (c) => {
 // Sync endpoint (no auth required for cron)
 api.route('/sync', sync);
 
+// Auth endpoints (no auth required)
+api.route('/auth', auth);
+
 // All other routes require authentication
 api.use('/jobs/*', authMiddleware);
 api.use('/applications/*', authMiddleware);
@@ -37,6 +42,7 @@ api.use('/reported/*', authMiddleware);
 api.use('/history/*', authMiddleware);
 api.use('/settings/*', authMiddleware);
 api.use('/resumes/*', authMiddleware);
+api.use('/cover-letters/*', authMiddleware);
 api.use('/generated/*', authMiddleware);
 api.use('/email/*', authMiddleware);
 api.use('/users/*', authMiddleware);
@@ -49,6 +55,7 @@ api.route('/reported', reported);
 api.route('/history', history);
 api.route('/settings', settings);
 api.route('/resumes', resumes);
+api.route('/cover-letters', coverLetters);
 api.route('/', generation); // Generation routes are mounted at root for /jobs/:id/generate/*
 api.route('/email', emailSync);
 api.route('/users', users);
