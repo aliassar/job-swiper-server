@@ -15,6 +15,10 @@ const updateSettingsSchema = z.object({
   emailNotifications: z.boolean().optional(),
   pushNotifications: z.boolean().optional(),
   automationStages: z.array(z.string()).optional(),
+  autoGenerateResume: z.boolean().optional(),
+  autoGenerateCoverLetter: z.boolean().optional(),
+  autoGenerateEmail: z.boolean().optional(),
+  aiFilteringEnabled: z.boolean().optional(),
 });
 
 // GET /api/settings - Get user settings

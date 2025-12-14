@@ -34,7 +34,7 @@ jobs.post('/:id/accept', async (c) => {
   const requestId = c.get('requestId');
   const jobId = c.req.param('id');
 
-  const job = await jobService.updateJobStatus(auth.userId, jobId, 'accepted', 'accepted');
+  const job = await jobService.acceptJob(auth.userId, jobId, requestId);
 
   return c.json(formatResponse(true, job, null, requestId));
 });
@@ -68,6 +68,17 @@ jobs.post('/:id/save', async (c) => {
   const jobId = c.req.param('id');
 
   const job = await jobService.toggleSave(auth.userId, jobId);
+
+  return c.json(formatResponse(true, job, null, requestId));
+});
+
+// DELETE /api/jobs/:id/save - Unsave a job
+jobs.delete('/:id/save', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const jobId = c.req.param('id');
+
+  const job = await jobService.unsave(auth.userId, jobId);
 
   return c.json(formatResponse(true, job, null, requestId));
 });
@@ -139,10 +150,13 @@ jobs.post('/:id/unreport', async (c) => {
 jobs.get('/skipped', async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
+  const page = parseIntSafe(c.req.query('page'), 1);
+  const limit = parseIntSafe(c.req.query('limit'), 20);
+  const search = c.req.query('search');
 
-  const skippedJobs = await jobService.getSkippedJobs(auth.userId);
+  const result = await jobService.getSkippedJobs(auth.userId, page, limit, search);
 
-  return c.json(formatResponse(true, skippedJobs, null, requestId));
+  return c.json(formatResponse(true, result, null, requestId));
 });
 
 export default jobs;
