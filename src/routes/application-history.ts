@@ -69,12 +69,10 @@ applicationHistory.get('/export', async (c) => {
     
     c.header('Content-Type', 'text/csv');
     c.header('Content-Disposition', `attachment; filename="applications-${Date.now()}.csv"`);
-    return c.body(csvContent);
+    return c.text(csvContent);
   } else {
     const pdfBuffer = await applicationService.exportApplicationsToPDF(result.items);
     
-    c.header('Content-Type', 'application/pdf');
-    c.header('Content-Disposition', `attachment; filename="applications-${Date.now()}.pdf"`);
     return new Response(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
