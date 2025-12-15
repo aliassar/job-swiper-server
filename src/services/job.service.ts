@@ -6,6 +6,7 @@ import { logger } from '../middleware/logger';
 import { timerService } from './timer.service';
 import { jobFilterClient } from '../lib/microservice-client';
 import type { JobFilterRequest, JobFilterResponse, FilterType } from '../lib/microservices';
+import PDFDocument from 'pdfkit';
 
 export const jobService = {
   async getPendingJobs(
@@ -696,6 +697,107 @@ export const jobService = {
         actionType: 'unreport',
         metadata: {},
       });
+    });
+  },
+
+  /**
+   * Export saved jobs to CSV
+   */
+  async exportSavedJobsToCSV(savedJobs: any[]): Promise<string> {
+    const headers = ['Company', 'Position', 'Location', 'Salary', 'Skills', 'Job Type', 'Status'];
+    const rows = savedJobs.map((job) => [
+      job.company || '',
+      job.position || '',
+      job.location || '',
+      job.salary || '',
+      job.skills || '',
+      job.jobType || '',
+      job.status || '',
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+
+    return csvContent;
+  },
+
+  /**
+   * Export saved jobs to PDF
+   */
+  async exportSavedJobsToPDF(savedJobs: any[]): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({
+          size: 'A4',
+          margins: { top: 50, bottom: 50, left: 50, right: 50 },
+        });
+
+        const buffers: Buffer[] = [];
+
+        // Collect PDF data
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => {
+          const pdfBuffer = Buffer.concat(buffers);
+          resolve(pdfBuffer);
+        });
+        doc.on('error', reject);
+
+        // Title
+        doc.fontSize(20).font('Helvetica-Bold').text('Saved Jobs Report', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(10).font('Helvetica').text(`Generated on ${new Date().toLocaleString()}`, { align: 'center' });
+        doc.moveDown(2);
+
+        if (savedJobs.length === 0) {
+          doc.fontSize(12).font('Helvetica').text('No saved jobs found.', { align: 'center' });
+        } else {
+          // Iterate through saved jobs
+          savedJobs.forEach((job, index) => {
+            if (index > 0) {
+              doc.moveDown();
+              doc.strokeColor('#cccccc').lineWidth(1).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+              doc.moveDown();
+            }
+
+            // Job details
+            doc.fontSize(14).font('Helvetica-Bold').fillColor('#333333');
+            doc.text(`${index + 1}. ${job.company} - ${job.position}`, { continued: false });
+            doc.moveDown(0.5);
+
+            doc.fontSize(10).font('Helvetica').fillColor('#666666');
+
+            // Location
+            if (job.location) {
+              doc.text(`Location: ${job.location}`);
+            }
+
+            // Salary
+            if (job.salary) {
+              doc.text(`Salary: ${job.salary}`);
+            }
+
+            // Skills
+            if (job.skills) {
+              doc.text(`Skills: ${job.skills}`);
+            }
+
+            // Job Type
+            if (job.jobType) {
+              doc.text(`Job Type: ${job.jobType}`);
+            }
+
+            // Status
+            doc.fillColor('#000000').font('Helvetica-Bold').text(`Status: `, { continued: true });
+            doc.font('Helvetica').fillColor('#666666').text(job.status || 'pending');
+          });
+        }
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
     });
   },
 };
