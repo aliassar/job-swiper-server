@@ -1,13 +1,13 @@
 import { db } from '../lib/db';
-import { applications, generatedResumes, generatedCoverLetters, followUpTracking, userSettings } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { applications, generatedResumes, generatedCoverLetters, followUpTracking, userSettings, jobs, users } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import { logger } from '../middleware/logger';
 import { workflowService } from './workflow.service';
-import { applicationService } from './application.service';
 import { notificationService } from './notification.service';
 import { timerService } from './timer.service';
 import { storage } from '../lib/storage';
-import { extractS3KeyFromUrl } from '../lib/utils';
+import { extractS3KeyFromUrl, escapeHtml } from '../lib/utils';
+import { emailClient } from '../lib/email-client';
 
 export interface Timer {
   id: string;
@@ -331,8 +331,60 @@ export const timerHandlers = {
         .limit(1);
 
       if (settings.length > 0 && settings[0].autoFollowUpEnabled) {
-        // TODO: Send automated follow-up email
-        logger.info({ applicationId, followUpCount }, 'Auto follow-up enabled - would send email here');
+        // Send automated follow-up email
+        try {
+          // Get user and job details in one query
+          const userAndJob = await db
+            .select({
+              userEmail: users.email,
+              company: jobs.company,
+              position: jobs.position,
+              location: jobs.location,
+            })
+            .from(users)
+            .innerJoin(jobs, eq(jobs.id, app.jobId))
+            .where(eq(users.id, userId))
+            .limit(1);
+
+          if (userAndJob.length === 0) {
+            logger.warn({ userId }, 'User or job not found for follow-up email');
+          } else {
+            const { userEmail, company, position, location } = userAndJob[0];
+            
+            // Escape HTML to prevent injection
+            const companyName = escapeHtml(company || 'Unknown Company');
+            const positionTitle = escapeHtml(position || 'Unknown Position');
+            const jobLocation = location ? escapeHtml(location) : null;
+
+            // Send follow-up email
+            await emailClient.sendEmail({
+              to: userEmail,
+              subject: `Follow-up Reminder: ${companyName} - ${positionTitle}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2>Follow-up Reminder (${followUpCount}/3)</h2>
+                  <p>Hi there,</p>
+                  <p>This is a reminder to follow up on your job application:</p>
+                  <div style="background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 0;"><strong>Company:</strong> ${companyName}</p>
+                    <p style="margin: 8px 0 0 0;"><strong>Position:</strong> ${positionTitle}</p>
+                    ${jobLocation ? `<p style="margin: 8px 0 0 0;"><strong>Location:</strong> ${jobLocation}</p>` : ''}
+                  </div>
+                  <p>Following up with hiring managers can demonstrate your continued interest and keep your application top of mind.</p>
+                  <p>Consider sending a polite follow-up message inquiring about the status of your application.</p>
+                  <p style="color: #9CA3AF; font-size: 12px; margin-top: 40px;">
+                    This is an automated reminder from Job Swiper. You can manage your follow-up settings in your account preferences.
+                  </p>
+                </div>
+              `,
+            });
+
+            logger.info({ applicationId, followUpCount, userEmail }, 'Auto follow-up email sent');
+          }
+        } catch (error) {
+          logger.error({ error, applicationId, followUpCount }, 'Failed to send automated follow-up email');
+          // Don't throw - we still want to schedule the next follow-up
+        }
       }
 
       // Schedule next follow-up if not at max
