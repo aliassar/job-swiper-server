@@ -10,11 +10,20 @@ import crypto from 'crypto';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // 96 bits recommended for GCM
 
+// Cache the decoded encryption key to avoid repeated parsing
+let cachedEncryptionKey: Buffer | null = null;
+
 /**
  * Get the encryption key from environment variable
  * The key should be 32 bytes (256 bits) for AES-256
+ * The key is cached after first access for performance
  */
 function getEncryptionKey(): Buffer {
+  // Return cached key if available
+  if (cachedEncryptionKey) {
+    return cachedEncryptionKey;
+  }
+
   const key = process.env.ENCRYPTION_KEY;
   
   if (!key) {
@@ -28,6 +37,9 @@ function getEncryptionKey(): Buffer {
     throw new Error('ENCRYPTION_KEY must be 32 bytes (256 bits) when decoded');
   }
   
+  // Cache the key for future use
+  cachedEncryptionKey = keyBuffer;
+  
   return keyBuffer;
 }
 
@@ -37,6 +49,25 @@ function getEncryptionKey(): Buffer {
  */
 export function generateEncryptionKey(): string {
   return crypto.randomBytes(32).toString('base64');
+}
+
+/**
+ * Helper function to encrypt with a provided IV
+ * Used internally by encrypt() and encryptCredentials()
+ */
+function encryptWithIv(plaintext: string, ivBase64: string): string {
+  const key = getEncryptionKey();
+  const iv = Buffer.from(ivBase64, 'base64');
+  
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  
+  let encrypted = cipher.update(plaintext, 'utf8', 'base64');
+  encrypted += cipher.final('base64');
+  
+  const authTag = cipher.getAuthTag();
+  
+  // Combine encrypted data and auth tag
+  return encrypted + ':' + authTag.toString('base64');
 }
 
 /**
@@ -50,22 +81,13 @@ export function encrypt(plaintext: string): { encryptedData: string; iv: string 
     throw new Error('Cannot encrypt empty value');
   }
 
-  const key = getEncryptionKey();
   const iv = crypto.randomBytes(IV_LENGTH);
-  
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  
-  let encrypted = cipher.update(plaintext, 'utf8', 'base64');
-  encrypted += cipher.final('base64');
-  
-  const authTag = cipher.getAuthTag();
-  
-  // Combine encrypted data and auth tag
-  const encryptedData = encrypted + ':' + authTag.toString('base64');
+  const ivBase64 = iv.toString('base64');
+  const encryptedData = encryptWithIv(plaintext, ivBase64);
   
   return {
     encryptedData,
-    iv: iv.toString('base64'),
+    iv: ivBase64,
   };
 }
 
@@ -176,22 +198,4 @@ export function decryptCredentials(encryptedCredentials: {
   }
 
   return result;
-}
-
-/**
- * Helper function to encrypt with a provided IV
- */
-function encryptWithIv(plaintext: string, ivBase64: string): string {
-  const key = getEncryptionKey();
-  const iv = Buffer.from(ivBase64, 'base64');
-  
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  
-  let encrypted = cipher.update(plaintext, 'utf8', 'base64');
-  encrypted += cipher.final('base64');
-  
-  const authTag = cipher.getAuthTag();
-  
-  // Combine encrypted data and auth tag
-  return encrypted + ':' + authTag.toString('base64');
 }
