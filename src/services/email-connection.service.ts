@@ -146,6 +146,9 @@ export const emailConnectionService = {
     logger.info({ userId, email, provider: 'gmail' }, 'Gmail connection added');
 
     // Send credentials to Stage Updater microservice (non-blocking)
+    // Note: Credentials are sent in plaintext to the microservice over HTTPS/TLS
+    // This is by design - the Stage Updater needs plaintext credentials to use them
+    // Security: HTTPS/TLS encryption + API key authentication protects data in transit
     // Don't await - let it happen in the background
     credentialTransmissionService.sendCredentials(
       userId,
@@ -652,26 +655,30 @@ export const emailConnectionService = {
   ): Promise<{ success: boolean; message: string }> {
     const connection = await this.getConnection(userId, connectionId);
 
-    // Decrypt credentials
-    const decrypted = decryptCredentials({
-      encryptedAccessToken: connection.encryptedAccessToken,
-      encryptedRefreshToken: connection.encryptedRefreshToken,
-      encryptedImapPassword: connection.encryptedImapPassword,
-      encryptionIv: connection.encryptionIv,
-    });
-
     // Prepare credentials based on provider type
     const credentials: any = {
       email: connection.email,
     };
 
     if (connection.provider === 'imap') {
+      // Decrypt IMAP password only
+      const decrypted = decryptCredentials({
+        encryptedImapPassword: connection.encryptedImapPassword,
+        encryptionIv: connection.encryptionIv,
+      });
+
       credentials.imapServer = connection.imapHost;
       credentials.imapPort = connection.imapPort;
       credentials.imapUsername = connection.imapUsername;
       credentials.imapPassword = decrypted.imapPassword;
     } else {
-      // OAuth providers
+      // Decrypt OAuth tokens for Gmail/Outlook/Yahoo
+      const decrypted = decryptCredentials({
+        encryptedAccessToken: connection.encryptedAccessToken,
+        encryptedRefreshToken: connection.encryptedRefreshToken,
+        encryptionIv: connection.encryptionIv,
+      });
+
       credentials.accessToken = decrypted.accessToken;
       credentials.refreshToken = decrypted.refreshToken;
     }
