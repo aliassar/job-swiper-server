@@ -7,14 +7,14 @@ import { ValidationError } from '../lib/errors';
 
 const applicationHistory = new Hono<AppContext>();
 
-// Validation schemas
-const exportSchema = z.object({
-  format: z.enum(['csv', 'pdf']),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  stage: z.string().optional(),
-  search: z.string().optional(),
-});
+// Validation schemas - reserved for future use
+// const exportSchema = z.object({
+//   format: z.enum(['csv', 'pdf']),
+//   startDate: z.string().optional(),
+//   endDate: z.string().optional(),
+//   stage: z.string().optional(),
+//   search: z.string().optional(),
+// });
 
 // GET /api/application-history - Query params: startDate, endDate, search, stage, page, limit
 applicationHistory.get('/', async (c) => {
@@ -43,7 +43,6 @@ applicationHistory.get('/', async (c) => {
 // GET /api/application-history/export - Query params: format (csv/pdf), date filters
 applicationHistory.get('/export', async (c) => {
   const auth = c.get('auth');
-  const requestId = c.get('requestId');
 
   const format = c.req.query('format');
   const startDate = c.req.query('startDate') ? new Date(c.req.query('startDate')!) : undefined;

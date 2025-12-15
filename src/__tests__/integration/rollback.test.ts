@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach, vi, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { jobService } from '../../services/job.service';
-import { applicationService } from '../../services/application.service';
 import { timerService } from '../../services/timer.service';
 
 // Mock the database module before importing services

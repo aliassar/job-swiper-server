@@ -144,8 +144,8 @@ describe('Export APIs Integration Tests', () => {
         location: 'San Francisco, CA',
         salary: '$120,000 - $150,000',
         skills: 'JavaScript, React, Node.js',
-        jobType: 'Full-time',
-        status: 'pending',
+        jobType: 'Full-time' as const,
+        status: 'pending' as const,
         saved: true,
       },
       {
@@ -155,8 +155,8 @@ describe('Export APIs Integration Tests', () => {
         location: 'Remote',
         salary: '$100,000 - $130,000',
         skills: 'Python, Django, PostgreSQL',
-        jobType: 'Full-time',
-        status: 'pending',
+        jobType: 'Full-time' as const,
+        status: 'pending' as const,
         saved: true,
       },
     ];
@@ -164,11 +164,13 @@ describe('Export APIs Integration Tests', () => {
     it('should retrieve saved jobs for export', async () => {
       vi.spyOn(jobService, 'getSavedJobs').mockResolvedValue({
         items: mockSavedJobs,
-        total: mockSavedJobs.length,
-        page: 1,
-        limit: 10000,
-        totalPages: 1,
-      });
+        pagination: {
+          total: mockSavedJobs.length,
+          page: 1,
+          limit: 10000,
+          totalPages: 1,
+        },
+      } as any);
 
       const result = await jobService.getSavedJobs(mockUserId, 1, 10000);
 
@@ -185,11 +187,13 @@ describe('Export APIs Integration Tests', () => {
 
       vi.spyOn(applicationService, 'getApplicationHistory').mockResolvedValue({
         items: [],
-        total: 0,
-        page: 1,
-        limit: 10000,
-        totalPages: 0,
-      });
+        pagination: {
+          total: 0,
+          page: 1,
+          limit: 10000,
+          totalPages: 0,
+        },
+      } as any);
 
       await applicationService.getApplicationHistory(mockUserId, {
         startDate,
@@ -209,11 +213,13 @@ describe('Export APIs Integration Tests', () => {
     it('should support stage filtering for application export', async () => {
       vi.spyOn(applicationService, 'getApplicationHistory').mockResolvedValue({
         items: [],
-        total: 0,
-        page: 1,
-        limit: 10000,
-        totalPages: 0,
-      });
+        pagination: {
+          total: 0,
+          page: 1,
+          limit: 10000,
+          totalPages: 0,
+        },
+      } as any);
 
       await applicationService.getApplicationHistory(mockUserId, {
         stage: 'interviewing',
@@ -231,11 +237,13 @@ describe('Export APIs Integration Tests', () => {
     it('should support search filtering for application export', async () => {
       vi.spyOn(applicationService, 'getApplicationHistory').mockResolvedValue({
         items: [],
-        total: 0,
-        page: 1,
-        limit: 10000,
-        totalPages: 0,
-      });
+        pagination: {
+          total: 0,
+          page: 1,
+          limit: 10000,
+          totalPages: 0,
+        },
+      } as any);
 
       await applicationService.getApplicationHistory(mockUserId, {
         search: 'Software Engineer',

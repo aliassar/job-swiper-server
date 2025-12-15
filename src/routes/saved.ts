@@ -22,7 +22,6 @@ saved.get('/', async (c) => {
 // GET /api/saved/export - Export saved jobs to CSV or PDF
 saved.get('/export', async (c) => {
   const auth = c.get('auth');
-  const requestId = c.get('requestId');
   const format = c.req.query('format');
   const search = c.req.query('search');
 
