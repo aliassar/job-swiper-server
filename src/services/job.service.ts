@@ -71,17 +71,12 @@ export const jobService = {
       query = query.where(like(jobs.location, `%${location}%`));
     }
 
-    // Add salary filter (basic implementation - would need parsing in production)
-    // TODO: For production, normalize salary data during insertion or add a separate numeric salary field
-    // Current implementation using REGEXP_REPLACE prevents index usage and will be slow on large datasets
-    if (salaryMin || salaryMax) {
-      // This is a simplified filter - in production you'd want to parse salary strings
-      if (salaryMin) {
-        query = query.where(sql`CAST(REGEXP_REPLACE(${jobs.salary}, '[^0-9]', '', 'g') AS INTEGER) >= ${salaryMin}`);
-      }
-      if (salaryMax) {
-        query = query.where(sql`CAST(REGEXP_REPLACE(${jobs.salary}, '[^0-9]', '', 'g') AS INTEGER) <= ${salaryMax}`);
-      }
+    // Add salary filter using numeric fields for better performance
+    if (salaryMin !== undefined) {
+      query = query.where(sql`${jobs.salaryMin} >= ${salaryMin}`);
+    }
+    if (salaryMax !== undefined) {
+      query = query.where(sql`${jobs.salaryMax} <= ${salaryMax}`);
     }
 
     const results = await query.orderBy(desc(jobs.createdAt)).limit(limit);
