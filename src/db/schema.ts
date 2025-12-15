@@ -168,6 +168,7 @@ export const userSettings = pgTable('user_settings', {
   autoFollowUpEnabled: boolean('auto_follow_up_enabled').notNull().default(false),
   baseResumeId: uuid('base_resume_id').references(() => resumeFiles.id),
   baseCoverLetterId: uuid('base_cover_letter_id'),
+  baseCoverLetterUrl: text('base_cover_letter_url'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -203,6 +204,8 @@ export const jobs = pgTable('jobs', {
   position: text('position').notNull(),
   location: text('location'),
   salary: text('salary'),
+  salaryMin: integer('salary_min'),
+  salaryMax: integer('salary_max'),
   skills: jsonb('skills').notNull().default([]),
   description: text('description'),
   requirements: text('requirements'),
