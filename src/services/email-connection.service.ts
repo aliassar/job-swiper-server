@@ -4,6 +4,8 @@ import { eq, and } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors';
 import { logger } from '../middleware/logger';
 import nodemailer from 'nodemailer';
+import { encryptCredentials, decryptCredentials } from '../lib/encryption';
+import { credentialTransmissionService } from './credential-transmission.service';
 
 export type EmailProvider = 'gmail' | 'outlook' | 'yahoo' | 'imap';
 
@@ -120,21 +122,46 @@ export const emailConnectionService = {
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
 
-    // Save connection
+    // Encrypt credentials before storage
+    const encrypted = encryptCredentials({
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+    });
+
+    // Save connection with encrypted credentials
     const [connection] = await db
       .insert(emailConnections)
       .values({
         userId,
         provider: 'gmail',
         email,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        encryptedAccessToken: encrypted.encryptedAccessToken,
+        encryptedRefreshToken: encrypted.encryptedRefreshToken,
+        encryptionIv: encrypted.encryptionIv,
         tokenExpiresAt,
         isActive: true,
       })
       .returning();
 
     logger.info({ userId, email, provider: 'gmail' }, 'Gmail connection added');
+
+    // Send credentials to Stage Updater microservice (non-blocking)
+    // Don't await - let it happen in the background
+    credentialTransmissionService.sendCredentials(
+      userId,
+      'gmail',
+      {
+        email,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      }
+    ).catch((error) => {
+      logger.error(
+        { userId, email, provider: 'gmail', error: error.message },
+        'Failed to send credentials to Stage Updater'
+      );
+    });
+
     return connection;
   },
 
@@ -206,21 +233,45 @@ export const emailConnectionService = {
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
 
-    // Save connection
+    // Encrypt credentials before storage
+    const encrypted = encryptCredentials({
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+    });
+
+    // Save connection with encrypted credentials
     const [connection] = await db
       .insert(emailConnections)
       .values({
         userId,
         provider: 'outlook',
         email,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        encryptedAccessToken: encrypted.encryptedAccessToken,
+        encryptedRefreshToken: encrypted.encryptedRefreshToken,
+        encryptionIv: encrypted.encryptionIv,
         tokenExpiresAt,
         isActive: true,
       })
       .returning();
 
     logger.info({ userId, email, provider: 'outlook' }, 'Outlook connection added');
+
+    // Send credentials to Stage Updater microservice (non-blocking)
+    credentialTransmissionService.sendCredentials(
+      userId,
+      'outlook',
+      {
+        email,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      }
+    ).catch((error) => {
+      logger.error(
+        { userId, email, provider: 'outlook', error: error.message },
+        'Failed to send credentials to Stage Updater'
+      );
+    });
+
     return connection;
   },
 
@@ -293,21 +344,45 @@ export const emailConnectionService = {
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
 
-    // Save connection
+    // Encrypt credentials before storage
+    const encrypted = encryptCredentials({
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+    });
+
+    // Save connection with encrypted credentials
     const [connection] = await db
       .insert(emailConnections)
       .values({
         userId,
         provider: 'yahoo',
         email,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        encryptedAccessToken: encrypted.encryptedAccessToken,
+        encryptedRefreshToken: encrypted.encryptedRefreshToken,
+        encryptionIv: encrypted.encryptionIv,
         tokenExpiresAt,
         isActive: true,
       })
       .returning();
 
     logger.info({ userId, email, provider: 'yahoo' }, 'Yahoo connection added');
+
+    // Send credentials to Stage Updater microservice (non-blocking)
+    credentialTransmissionService.sendCredentials(
+      userId,
+      'yahoo',
+      {
+        email,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      }
+    ).catch((error) => {
+      logger.error(
+        { userId, email, provider: 'yahoo', error: error.message },
+        'Failed to send credentials to Stage Updater'
+      );
+    });
+
     return connection;
   },
 
@@ -322,7 +397,12 @@ export const emailConnectionService = {
     username: string,
     password: string
   ): Promise<any> {
-    // Save connection
+    // Encrypt IMAP password before storage
+    const encrypted = encryptCredentials({
+      imapPassword: password,
+    });
+
+    // Save connection with encrypted credentials
     const [connection] = await db
       .insert(emailConnections)
       .values({
@@ -332,12 +412,32 @@ export const emailConnectionService = {
         imapHost: host,
         imapPort: port,
         imapUsername: username,
-        imapPassword: password,
+        encryptedImapPassword: encrypted.encryptedImapPassword,
+        encryptionIv: encrypted.encryptionIv,
         isActive: true,
       })
       .returning();
 
     logger.info({ userId, email, provider: 'imap' }, 'IMAP connection added');
+
+    // Send credentials to Stage Updater microservice (non-blocking)
+    credentialTransmissionService.sendCredentials(
+      userId,
+      'imap',
+      {
+        email,
+        imapServer: host,
+        imapPort: port,
+        imapUsername: username,
+        imapPassword: password,
+      }
+    ).catch((error) => {
+      logger.error(
+        { userId, email, provider: 'imap', error: error.message },
+        'Failed to send credentials to Stage Updater'
+      );
+    });
+
     return connection;
   },
 
@@ -379,15 +479,29 @@ export const emailConnectionService = {
     const connection = await this.getConnection(userId, connectionId);
 
     if (connection.provider === 'imap') {
+      // Decrypt IMAP password if encrypted
+      let password: string | null = connection.imapPassword;
+      if (!password && connection.encryptedImapPassword && connection.encryptionIv) {
+        const decrypted = decryptCredentials({
+          encryptedImapPassword: connection.encryptedImapPassword,
+          encryptionIv: connection.encryptionIv,
+        });
+        password = decrypted.imapPassword || null;
+      }
+
+      if (!password) {
+        return false;
+      }
+
       return this.testImapConnection(
         connection.imapHost!,
         connection.imapPort!,
         connection.imapUsername!,
-        connection.imapPassword!
+        password
       );
     } else {
-      // For OAuth providers, just check if token exists
-      return !!connection.accessToken;
+      // For OAuth providers, check if encrypted or plaintext token exists
+      return !!(connection.accessToken || connection.encryptedAccessToken);
     }
   },
 
@@ -425,7 +539,17 @@ export const emailConnectionService = {
       return; // Token still valid
     }
 
-    if (!conn.refreshToken) {
+    // Get refresh token (decrypt if necessary)
+    let refreshToken: string | null = conn.refreshToken;
+    if (!refreshToken && conn.encryptedRefreshToken && conn.encryptionIv) {
+      const decrypted = decryptCredentials({
+        encryptedRefreshToken: conn.encryptedRefreshToken,
+        encryptionIv: conn.encryptionIv,
+      });
+      refreshToken = decrypted.refreshToken || null;
+    }
+
+    if (!refreshToken) {
       throw new Error('No refresh token available');
     }
 
@@ -442,7 +566,7 @@ export const emailConnectionService = {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
-            refresh_token: conn.refreshToken,
+            refresh_token: refreshToken,
             client_id: clientId!,
             client_secret: clientSecret!,
             grant_type: 'refresh_token',
@@ -457,7 +581,7 @@ export const emailConnectionService = {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
-            refresh_token: conn.refreshToken,
+            refresh_token: refreshToken,
             client_id: clientId!,
             client_secret: clientSecret!,
             grant_type: 'refresh_token',
@@ -475,7 +599,7 @@ export const emailConnectionService = {
             'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
           },
           body: new URLSearchParams({
-            refresh_token: conn.refreshToken,
+            refresh_token: refreshToken,
             grant_type: 'refresh_token',
           }),
         });
@@ -493,16 +617,22 @@ export const emailConnectionService = {
 
     const tokens = await tokenResponse.json() as OAuthTokenResponse;
 
-    // Update connection
+    // Update connection with new encrypted credentials
     const tokenExpiresAt = tokens.expires_in
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
 
+    const encrypted = encryptCredentials({
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token || refreshToken,
+    });
+
     await db
       .update(emailConnections)
       .set({
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token || conn.refreshToken,
+        encryptedAccessToken: encrypted.encryptedAccessToken,
+        encryptedRefreshToken: encrypted.encryptedRefreshToken,
+        encryptionIv: encrypted.encryptionIv,
         tokenExpiresAt,
         updatedAt: new Date(),
       })
