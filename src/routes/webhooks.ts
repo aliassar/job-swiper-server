@@ -9,6 +9,10 @@ import {
   ApplicationSubmittedWebhook,
 } from '../lib/microservices';
 import { notificationService } from '../services/notification.service';
+import { applicationService } from '../services/application.service';
+import { db } from '../lib/db';
+import { applications } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 const webhooks = new Hono<AppContext>();
 
@@ -68,8 +72,14 @@ webhooks.post('/status-update', async (c) => {
 
   const data: StatusUpdateWebhook = validated.data;
 
-  // TODO: Update application stage in database
   console.log('Received status update webhook:', data);
+
+  // Update application stage in database
+  await applicationService.updateApplicationStage(
+    data.userId,
+    data.applicationId,
+    data.newStage as any
+  );
 
   // Create notification for user
   await notificationService.createNotification(
@@ -101,7 +111,17 @@ webhooks.post('/generation-complete', async (c) => {
   console.log('Received generation complete webhook:', data);
 
   if (data.success) {
-    // TODO: Update application with generated document
+    // Update application with generated document
+    if (data.type === 'resume' && data.s3Key) {
+      // Note: In a full implementation, we would create a generatedResume record
+      // and link it to the application. For now, we just log this.
+      console.log('Resume generated successfully:', { s3Key: data.s3Key, filename: data.filename });
+    } else if (data.type === 'cover_letter' && data.s3Key) {
+      // Note: In a full implementation, we would create a generatedCoverLetter record
+      // and link it to the application. For now, we just log this.
+      console.log('Cover letter generated successfully:', { s3Key: data.s3Key, filename: data.filename });
+    }
+    
     // Create notification for user
     await notificationService.createNotification(
       data.userId,
@@ -142,8 +162,13 @@ webhooks.post('/application-submitted', async (c) => {
   console.log('Received application submitted webhook:', data);
 
   if (data.success) {
-    // TODO: Update application status to 'Applied'
-    // TODO: Set appliedAt timestamp
+    // Update application status to 'Applied' and set appliedAt timestamp
+    await applicationService.updateApplicationStage(data.userId, data.applicationId, 'Applied');
+    await db
+      .update(applications)
+      .set({ appliedAt: new Date(data.submittedAt || new Date().toISOString()) })
+      .where(eq(applications.id, data.applicationId));
+    
     // Create notification
     await notificationService.createNotification(
       data.userId,
@@ -157,7 +182,9 @@ webhooks.post('/application-submitted', async (c) => {
       }
     );
   } else {
-    // TODO: Update application status to 'Failed'
+    // Update application status to 'Failed'
+    await applicationService.updateApplicationStage(data.userId, data.applicationId, 'Failed');
+    
     // Create failure notification
     await notificationService.createNotification(
       data.userId,
