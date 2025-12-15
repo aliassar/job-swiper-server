@@ -52,6 +52,121 @@ export const emailConnectionService = {
   },
 
   /**
+   * Get connection with automatic token refresh if expired
+   * Use this method when you need to use the credentials
+   */
+  async getConnectionWithValidToken(userId: string, connectionId: string) {
+    logger.info({ userId, connectionId }, 'Retrieving connection with token validation');
+    
+    const connection = await this.getConnection(userId, connectionId);
+
+    // Skip validation for IMAP connections
+    if (connection.provider === 'imap') {
+      logger.info({ connectionId, provider: 'imap' }, 'IMAP connection does not require token validation');
+      return connection;
+    }
+
+    // Check if token is expired or will expire soon (within 5 minutes)
+    const now = new Date();
+    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+
+    if (connection.tokenExpiresAt && connection.tokenExpiresAt < fiveMinutesFromNow) {
+      logger.info(
+        { 
+          connectionId, 
+          provider: connection.provider, 
+          expiresAt: connection.tokenExpiresAt,
+          status: 'expired_or_expiring_soon'
+        },
+        'Token expired or expiring soon, refreshing'
+      );
+
+      // Refresh the token
+      await this.refreshOAuthToken(connectionId);
+      
+      // Retrieve the updated connection
+      const refreshedConnection = await this.getConnection(userId, connectionId);
+      
+      logger.info(
+        { 
+          connectionId, 
+          provider: refreshedConnection.provider,
+          newExpiresAt: refreshedConnection.tokenExpiresAt,
+          status: 'refreshed'
+        },
+        'Token successfully refreshed'
+      );
+      
+      return refreshedConnection;
+    }
+
+    logger.info(
+      { 
+        connectionId, 
+        provider: connection.provider,
+        expiresAt: connection.tokenExpiresAt,
+        status: 'valid'
+      },
+      'Token is valid and not expiring soon'
+    );
+
+    return connection;
+  },
+
+  /**
+   * Validate that a connection has valid credentials
+   * Returns true if credentials exist and are valid
+   */
+  async validateConnection(userId: string, connectionId: string): Promise<boolean> {
+    logger.info({ userId, connectionId }, 'Validating connection credentials');
+    
+    try {
+      const connection = await this.getConnection(userId, connectionId);
+
+      // For IMAP, check if credentials exist
+      if (connection.provider === 'imap') {
+        const hasImapCreds = !!(
+          connection.imapHost &&
+          connection.imapPort &&
+          connection.imapUsername &&
+          (connection.imapPassword || connection.encryptedImapPassword)
+        );
+        
+        logger.info(
+          { connectionId, provider: 'imap', hasCredentials: hasImapCreds },
+          'IMAP credential validation result'
+        );
+        
+        return hasImapCreds;
+      }
+
+      // For OAuth, check if tokens exist and are not expired
+      const hasAccessToken = !!(connection.accessToken || connection.encryptedAccessToken);
+      const hasRefreshToken = !!(connection.refreshToken || connection.encryptedRefreshToken);
+      const isNotExpired = !connection.tokenExpiresAt || connection.tokenExpiresAt > new Date();
+
+      const isValid = hasAccessToken && hasRefreshToken && isNotExpired;
+      
+      logger.info(
+        { 
+          connectionId, 
+          provider: connection.provider,
+          hasAccessToken,
+          hasRefreshToken,
+          isNotExpired,
+          isValid
+        },
+        'OAuth credential validation result'
+      );
+
+      return isValid;
+    } catch (error) {
+      logger.error({ error, userId, connectionId }, 'Error validating connection');
+      return false;
+    }
+  },
+
+  /**
    * Start Gmail OAuth flow
    * Returns the OAuth authorization URL
    */
@@ -81,12 +196,17 @@ export const emailConnectionService = {
    * Complete Gmail OAuth flow
    */
   async completeGmailOAuth(userId: string, code: string, redirectUri: string): Promise<any> {
+    logger.info({ userId, provider: 'gmail' }, 'Starting Gmail OAuth completion');
+    
     const clientId = process.env.GMAIL_CLIENT_ID;
     const clientSecret = process.env.GMAIL_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
+      logger.error({ userId }, 'Gmail OAuth not configured - missing client credentials');
       throw new Error('Gmail OAuth not configured');
     }
+
+    logger.info({ userId }, 'Exchanging authorization code for tokens');
 
     // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -103,32 +223,72 @@ export const emailConnectionService = {
 
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text();
-      logger.error({ error }, 'Failed to exchange Gmail OAuth code');
+      logger.error({ error, userId }, 'Failed to exchange Gmail OAuth code');
       throw new Error('Failed to authenticate with Gmail');
     }
 
     const tokens = await tokenResponse.json() as OAuthTokenResponse;
 
-    // Get user email from Google
+    // Validate token response
+    if (!tokens.access_token) {
+      logger.error({ userId }, 'Gmail OAuth response missing access token');
+      throw new Error('Invalid token response from Gmail');
+    }
+
+    if (!tokens.refresh_token) {
+      logger.warn({ userId }, 'Gmail OAuth response missing refresh token - may need to revoke access and retry');
+    }
+
+    logger.info({ userId, hasRefreshToken: !!tokens.refresh_token }, 'Successfully received OAuth tokens');
+
+    // Get and validate user email from Google
+    logger.info({ userId }, 'Fetching user info from Google');
+    
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
 
+    if (!userInfoResponse.ok) {
+      logger.error({ userId, status: userInfoResponse.status }, 'Failed to fetch Gmail user info');
+      throw new Error('Failed to fetch user information from Gmail');
+    }
+
     const userInfo: any = await userInfoResponse.json();
     const email = userInfo.email;
+
+    if (!email) {
+      logger.error({ userId, userInfo }, 'Gmail user info missing email address');
+      throw new Error('Unable to retrieve email address from Gmail');
+    }
+
+    logger.info({ userId, email }, 'Successfully validated user email');
 
     // Calculate token expiry
     const tokenExpiresAt = tokens.expires_in
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
 
+    logger.info(
+      { 
+        userId, 
+        email, 
+        expiresIn: tokens.expires_in,
+        expiresAt: tokenExpiresAt
+      },
+      'Token expiry calculated'
+    );
+
     // Encrypt credentials before storage
+    logger.info({ userId, email }, 'Encrypting credentials for secure storage');
+    
     const encrypted = encryptCredentials({
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
     });
 
     // Save connection with encrypted credentials
+    logger.info({ userId, email }, 'Saving Gmail connection to database');
+    
     const [connection] = await db
       .insert(emailConnections)
       .values({
@@ -195,12 +355,17 @@ export const emailConnectionService = {
    * Complete Outlook OAuth flow
    */
   async completeOutlookOAuth(userId: string, code: string, redirectUri: string): Promise<any> {
+    logger.info({ userId, provider: 'outlook' }, 'Starting Outlook OAuth completion');
+    
     const clientId = process.env.OUTLOOK_CLIENT_ID;
     const clientSecret = process.env.OUTLOOK_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
+      logger.error({ userId }, 'Outlook OAuth not configured - missing client credentials');
       throw new Error('Outlook OAuth not configured');
     }
+
+    logger.info({ userId }, 'Exchanging authorization code for tokens');
 
     // Exchange code for tokens
     const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
@@ -217,32 +382,72 @@ export const emailConnectionService = {
 
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text();
-      logger.error({ error }, 'Failed to exchange Outlook OAuth code');
+      logger.error({ error, userId }, 'Failed to exchange Outlook OAuth code');
       throw new Error('Failed to authenticate with Outlook');
     }
 
     const tokens = await tokenResponse.json() as OAuthTokenResponse;
 
-    // Get user email from Microsoft Graph
+    // Validate token response
+    if (!tokens.access_token) {
+      logger.error({ userId }, 'Outlook OAuth response missing access token');
+      throw new Error('Invalid token response from Outlook');
+    }
+
+    if (!tokens.refresh_token) {
+      logger.warn({ userId }, 'Outlook OAuth response missing refresh token');
+    }
+
+    logger.info({ userId, hasRefreshToken: !!tokens.refresh_token }, 'Successfully received OAuth tokens');
+
+    // Get and validate user email from Microsoft Graph
+    logger.info({ userId }, 'Fetching user info from Microsoft Graph');
+    
     const userInfoResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
 
+    if (!userInfoResponse.ok) {
+      logger.error({ userId, status: userInfoResponse.status }, 'Failed to fetch Outlook user info');
+      throw new Error('Failed to fetch user information from Outlook');
+    }
+
     const userInfo: any = await userInfoResponse.json();
     const email = userInfo.mail || userInfo.userPrincipalName;
+
+    if (!email) {
+      logger.error({ userId, userInfo }, 'Outlook user info missing email address');
+      throw new Error('Unable to retrieve email address from Outlook');
+    }
+
+    logger.info({ userId, email }, 'Successfully validated user email');
 
     // Calculate token expiry
     const tokenExpiresAt = tokens.expires_in
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
 
+    logger.info(
+      { 
+        userId, 
+        email, 
+        expiresIn: tokens.expires_in,
+        expiresAt: tokenExpiresAt
+      },
+      'Token expiry calculated'
+    );
+
     // Encrypt credentials before storage
+    logger.info({ userId, email }, 'Encrypting credentials for secure storage');
+    
     const encrypted = encryptCredentials({
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
     });
 
     // Save connection with encrypted credentials
+    logger.info({ userId, email }, 'Saving Outlook connection to database');
+    
     const [connection] = await db
       .insert(emailConnections)
       .values({
@@ -305,12 +510,17 @@ export const emailConnectionService = {
    * Complete Yahoo OAuth flow
    */
   async completeYahooOAuth(userId: string, code: string, redirectUri: string): Promise<any> {
+    logger.info({ userId, provider: 'yahoo' }, 'Starting Yahoo OAuth completion');
+    
     const clientId = process.env.YAHOO_CLIENT_ID;
     const clientSecret = process.env.YAHOO_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
+      logger.error({ userId }, 'Yahoo OAuth not configured - missing client credentials');
       throw new Error('Yahoo OAuth not configured');
     }
+
+    logger.info({ userId }, 'Exchanging authorization code for tokens');
 
     // Exchange code for tokens
     const tokenResponse = await fetch('https://api.login.yahoo.com/oauth2/get_token', {
@@ -328,32 +538,72 @@ export const emailConnectionService = {
 
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text();
-      logger.error({ error }, 'Failed to exchange Yahoo OAuth code');
+      logger.error({ error, userId }, 'Failed to exchange Yahoo OAuth code');
       throw new Error('Failed to authenticate with Yahoo');
     }
 
     const tokens = await tokenResponse.json() as OAuthTokenResponse;
 
-    // Get user email - Yahoo provides it in the token response or we need to call userinfo
+    // Validate token response
+    if (!tokens.access_token) {
+      logger.error({ userId }, 'Yahoo OAuth response missing access token');
+      throw new Error('Invalid token response from Yahoo');
+    }
+
+    if (!tokens.refresh_token) {
+      logger.warn({ userId }, 'Yahoo OAuth response missing refresh token');
+    }
+
+    logger.info({ userId, hasRefreshToken: !!tokens.refresh_token }, 'Successfully received OAuth tokens');
+
+    // Get and validate user email from Yahoo userinfo
+    logger.info({ userId }, 'Fetching user info from Yahoo');
+    
     const userInfoResponse = await fetch('https://api.login.yahoo.com/openid/v1/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
 
+    if (!userInfoResponse.ok) {
+      logger.error({ userId, status: userInfoResponse.status }, 'Failed to fetch Yahoo user info');
+      throw new Error('Failed to fetch user information from Yahoo');
+    }
+
     const userInfo: any = await userInfoResponse.json();
     const email = userInfo.email;
+
+    if (!email) {
+      logger.error({ userId, userInfo }, 'Yahoo user info missing email address');
+      throw new Error('Unable to retrieve email address from Yahoo');
+    }
+
+    logger.info({ userId, email }, 'Successfully validated user email');
 
     // Calculate token expiry
     const tokenExpiresAt = tokens.expires_in
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
 
+    logger.info(
+      { 
+        userId, 
+        email, 
+        expiresIn: tokens.expires_in,
+        expiresAt: tokenExpiresAt
+      },
+      'Token expiry calculated'
+    );
+
     // Encrypt credentials before storage
+    logger.info({ userId, email }, 'Encrypting credentials for secure storage');
+    
     const encrypted = encryptCredentials({
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
     });
 
     // Save connection with encrypted credentials
+    logger.info({ userId, email }, 'Saving Yahoo connection to database');
+    
     const [connection] = await db
       .insert(emailConnections)
       .values({
@@ -400,12 +650,18 @@ export const emailConnectionService = {
     username: string,
     password: string
   ): Promise<any> {
+    logger.info({ userId, email, host, port, provider: 'imap' }, 'Adding IMAP connection');
+    
     // Encrypt IMAP password before storage
+    logger.info({ userId, email }, 'Encrypting IMAP password for secure storage');
+    
     const encrypted = encryptCredentials({
       imapPassword: password,
     });
 
     // Save connection with encrypted credentials
+    logger.info({ userId, email }, 'Saving IMAP connection to database');
+    
     const [connection] = await db
       .insert(emailConnections)
       .values({
@@ -449,7 +705,15 @@ export const emailConnectionService = {
    * Validates credentials by attempting to connect to the IMAP server
    */
   async testImapConnection(host: string, port: number, username: string, password: string): Promise<boolean> {
+    logger.info({ host, port, username }, 'Testing IMAP connection');
+    
     try {
+      // Validate input parameters
+      if (!host || !username || !password) {
+        logger.error({ host, port, username }, 'Missing required IMAP credentials');
+        return false;
+      }
+
       // Create a transporter with the IMAP credentials
       const transporter = nodemailer.createTransport({
         host,
@@ -463,6 +727,8 @@ export const emailConnectionService = {
         connectionTimeout: 10000,
         greetingTimeout: 10000,
       });
+
+      logger.info({ host, port, username }, 'Verifying IMAP server connection');
 
       // Verify the connection
       await transporter.verify();
@@ -525,6 +791,8 @@ export const emailConnectionService = {
    * Refresh OAuth token if expired
    */
   async refreshOAuthToken(connectionId: string): Promise<void> {
+    logger.info({ connectionId }, 'Starting OAuth token refresh');
+    
     const connection = await db
       .select()
       .from(emailConnections)
@@ -532,19 +800,33 @@ export const emailConnectionService = {
       .limit(1);
 
     if (connection.length === 0) {
+      logger.error({ connectionId }, 'Connection not found for token refresh');
       throw new NotFoundError('Email connection');
     }
 
     const conn = connection[0];
 
+    logger.info(
+      { 
+        connectionId, 
+        provider: conn.provider,
+        expiresAt: conn.tokenExpiresAt
+      },
+      'Checking if token needs refresh'
+    );
+
     // Check if token needs refresh
     if (!conn.tokenExpiresAt || conn.tokenExpiresAt > new Date()) {
+      logger.info({ connectionId, provider: conn.provider }, 'Token still valid, no refresh needed');
       return; // Token still valid
     }
+
+    logger.info({ connectionId, provider: conn.provider }, 'Token expired, refreshing');
 
     // Get refresh token (decrypt if necessary)
     let refreshToken: string | null = conn.refreshToken;
     if (!refreshToken && conn.encryptedRefreshToken && conn.encryptionIv) {
+      logger.info({ connectionId }, 'Decrypting refresh token');
       const decrypted = decryptCredentials({
         encryptedRefreshToken: conn.encryptedRefreshToken,
         encryptionIv: conn.encryptionIv,
@@ -553,8 +835,11 @@ export const emailConnectionService = {
     }
 
     if (!refreshToken) {
+      logger.error({ connectionId, provider: conn.provider }, 'No refresh token available');
       throw new Error('No refresh token available');
     }
+
+    logger.info({ connectionId, provider: conn.provider }, 'Requesting new access token from provider');
 
     // Refresh based on provider
     let tokenResponse: Response;
@@ -625,6 +910,15 @@ export const emailConnectionService = {
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
 
+    logger.info(
+      { 
+        connectionId, 
+        provider: conn.provider,
+        newExpiresAt: tokenExpiresAt
+      },
+      'Encrypting and saving new tokens'
+    );
+
     const encrypted = encryptCredentials({
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token || refreshToken,
@@ -641,7 +935,14 @@ export const emailConnectionService = {
       })
       .where(eq(emailConnections.id, connectionId));
 
-    logger.info({ connectionId, provider: conn.provider }, 'OAuth token refreshed');
+    logger.info(
+      { 
+        connectionId, 
+        provider: conn.provider,
+        newExpiresAt: tokenExpiresAt
+      },
+      'OAuth token successfully refreshed and saved'
+    );
   },
 
   /**
@@ -653,7 +954,10 @@ export const emailConnectionService = {
     connectionId: string,
     requestId?: string
   ): Promise<{ success: boolean; message: string }> {
-    const connection = await this.getConnection(userId, connectionId);
+    logger.info({ userId, connectionId, requestId }, 'Starting manual credential sync to Stage Updater');
+    
+    // Get connection with token validation and auto-refresh
+    const connection = await this.getConnectionWithValidToken(userId, connectionId);
 
     // Prepare credentials based on provider type
     const credentials: any = {
@@ -661,6 +965,8 @@ export const emailConnectionService = {
     };
 
     if (connection.provider === 'imap') {
+      logger.info({ connectionId, provider: 'imap' }, 'Preparing IMAP credentials for sync');
+      
       // Decrypt IMAP password only
       const decrypted = decryptCredentials({
         encryptedImapPassword: connection.encryptedImapPassword,
@@ -672,6 +978,8 @@ export const emailConnectionService = {
       credentials.imapUsername = connection.imapUsername;
       credentials.imapPassword = decrypted.imapPassword;
     } else {
+      logger.info({ connectionId, provider: connection.provider }, 'Preparing OAuth credentials for sync');
+      
       // Decrypt OAuth tokens for Gmail/Outlook/Yahoo
       const decrypted = decryptCredentials({
         encryptedAccessToken: connection.encryptedAccessToken,
@@ -684,6 +992,8 @@ export const emailConnectionService = {
     }
 
     // Send to Stage Updater
+    logger.info({ userId, connectionId, provider: connection.provider }, 'Sending credentials to Stage Updater');
+    
     await credentialTransmissionService.sendCredentials(
       userId,
       connection.provider as any,
@@ -693,7 +1003,7 @@ export const emailConnectionService = {
 
     logger.info(
       { userId, connectionId, provider: connection.provider, requestId },
-      'Manually synced credentials to Stage Updater'
+      'Successfully synced credentials to Stage Updater'
     );
 
     return {
