@@ -72,11 +72,14 @@ export const jobService = {
     }
 
     // Add salary filter using numeric fields for better performance
+    // Filter jobs where salary range overlaps with user's desired range
     if (salaryMin !== undefined) {
-      query = query.where(sql`${jobs.salaryMin} >= ${salaryMin}`);
+      // Job's maximum salary should be at least the user's minimum requirement
+      query = query.where(sql`${jobs.salaryMax} >= ${salaryMin}`);
     }
     if (salaryMax !== undefined) {
-      query = query.where(sql`${jobs.salaryMax} <= ${salaryMax}`);
+      // Job's minimum salary should be within the user's maximum budget
+      query = query.where(sql`${jobs.salaryMin} <= ${salaryMax}`);
     }
 
     const results = await query.orderBy(desc(jobs.createdAt)).limit(limit);
