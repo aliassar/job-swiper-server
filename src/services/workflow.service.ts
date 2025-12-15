@@ -1,5 +1,5 @@
 import { db } from '../lib/db';
-import { workflowRuns, applications, userSettings, jobs, userProfiles } from '../db/schema';
+import { workflowRuns, applications, userSettings, jobs, userProfiles, generatedResumes, generatedCoverLetters } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors';
 import { logger } from '../middleware/logger';
@@ -347,15 +347,43 @@ export const workflowService = {
 
           const appData = updatedApp[0];
 
+          // Get S3 keys for generated documents
+          let resumeS3Key: string | undefined;
+          let coverLetterS3Key: string | undefined;
+
+          if (appData.generatedResumeId) {
+            const [resume] = await db
+              .select()
+              .from(generatedResumes)
+              .where(eq(generatedResumes.id, appData.generatedResumeId))
+              .limit(1);
+            if (resume) {
+              // Extract S3 key from URL
+              resumeS3Key = resume.fileUrl.split('/').pop() || resume.fileUrl;
+            }
+          }
+
+          if (appData.generatedCoverLetterId) {
+            const [coverLetter] = await db
+              .select()
+              .from(generatedCoverLetters)
+              .where(eq(generatedCoverLetters.id, appData.generatedCoverLetterId))
+              .limit(1);
+            if (coverLetter) {
+              // Extract S3 key from URL
+              coverLetterS3Key = coverLetter.fileUrl.split('/').pop() || coverLetter.fileUrl;
+            }
+          }
+
           // Call application sender microservice
           if (process.env.APPLICATION_SENDER_SERVICE_URL) {
             const request: ApplicationSenderRequest = {
               applicationId: app.id,
-              resumeS3Key: appData.generatedResumeId ? undefined : undefined, // Would need to get actual S3 key
-              coverLetterS3Key: appData.generatedCoverLetterId ? undefined : undefined, // Would need to get actual S3 key
+              resumeS3Key,
+              coverLetterS3Key,
               userProfile,
-              applyMethod: 'email', // Default to email, could be determined from job details
-              applyEmail: jobDetails.jobUrl || undefined, // Would need proper email extraction
+              applyMethod: 'form', // Use form-based application
+              applyUrl: jobDetails.jobUrl || undefined,
             };
 
             const response = await applicationSenderClient.request<ApplicationSenderResponse>(
