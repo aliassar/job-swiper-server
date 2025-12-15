@@ -1,20 +1,10 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { AppContext } from '../types';
 import { applicationService } from '../services/application.service';
 import { formatResponse, parseIntSafe } from '../lib/utils';
 import { ValidationError } from '../lib/errors';
 
 const applicationHistory = new Hono<AppContext>();
-
-// Validation schemas
-const exportSchema = z.object({
-  format: z.enum(['csv', 'pdf']),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  stage: z.string().optional(),
-  search: z.string().optional(),
-});
 
 // GET /api/application-history - Query params: startDate, endDate, search, stage, page, limit
 applicationHistory.get('/', async (c) => {
@@ -43,7 +33,6 @@ applicationHistory.get('/', async (c) => {
 // GET /api/application-history/export - Query params: format (csv/pdf), date filters
 applicationHistory.get('/export', async (c) => {
   const auth = c.get('auth');
-  const requestId = c.get('requestId');
 
   const format = c.req.query('format');
   const startDate = c.req.query('startDate') ? new Date(c.req.query('startDate')!) : undefined;
@@ -70,12 +59,10 @@ applicationHistory.get('/export', async (c) => {
     
     c.header('Content-Type', 'text/csv');
     c.header('Content-Disposition', `attachment; filename="applications-${Date.now()}.csv"`);
-    return c.body(csvContent);
+    return c.text(csvContent);
   } else {
     const pdfBuffer = await applicationService.exportApplicationsToPDF(result.items);
     
-    c.header('Content-Type', 'application/pdf');
-    c.header('Content-Disposition', `attachment; filename="applications-${Date.now()}.pdf"`);
     return new Response(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
