@@ -207,13 +207,17 @@ describe('Email Connection Validation', () => {
     });
 
     it('should not refresh when tokenExpiresAt is null', () => {
-      const tokenExpiresAt = null;
-      const now = new Date();
-      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+      // Simulate a connection without token expiry (like IMAP)
+      const getTokenExpiresAt = (): Date | null => null;
+      const tokenExpiresAt = getTokenExpiresAt();
+      const fiveMinutesFromNow = new Date(Date.now() + 5 * 60 * 1000);
       
-      const needsRefresh = tokenExpiresAt && tokenExpiresAt < fiveMinutesFromNow;
+      let needsRefresh = false;
+      if (tokenExpiresAt) {
+        needsRefresh = tokenExpiresAt < fiveMinutesFromNow;
+      }
       
-      expect(needsRefresh).toBeFalsy();
+      expect(needsRefresh).toBe(false);
     });
   });
 });
