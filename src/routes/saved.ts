@@ -37,12 +37,10 @@ saved.get('/export', async (c) => {
     
     c.header('Content-Type', 'text/csv');
     c.header('Content-Disposition', `attachment; filename="saved-jobs-${Date.now()}.csv"`);
-    return c.body(csvContent);
+    return c.text(csvContent);
   } else {
     const pdfBuffer = await jobService.exportSavedJobsToPDF(result.items);
     
-    c.header('Content-Type', 'application/pdf');
-    c.header('Content-Disposition', `attachment; filename="saved-jobs-${Date.now()}.pdf"`);
     return new Response(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
