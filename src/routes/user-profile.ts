@@ -5,7 +5,7 @@ import { db } from '../lib/db';
 import { userProfiles, resumeFiles, userSettings } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { formatResponse } from '../lib/utils';
-import { ValidationError, NotFoundError } from '../lib/errors';
+import { ValidationError } from '../lib/errors';
 import { storage } from '../lib/storage';
 
 const userProfile = new Hono<AppContext>();
@@ -54,18 +54,27 @@ userProfile.get('/', async (c) => {
     .limit(1);
 
   let baseResume = null;
-  if (settings.length > 0 && settings[0].baseResumeId) {
-    const resume = await db
-      .select()
-      .from(resumeFiles)
-      .where(eq(resumeFiles.id, settings[0].baseResumeId))
-      .limit(1);
-    baseResume = resume.length > 0 ? resume[0] : null;
+  let baseCoverLetter = null;
+  if (settings.length > 0) {
+    if (settings[0].baseResumeId) {
+      const resume = await db
+        .select()
+        .from(resumeFiles)
+        .where(eq(resumeFiles.id, settings[0].baseResumeId))
+        .limit(1);
+      baseResume = resume.length > 0 ? resume[0] : null;
+    }
+    if (settings[0].baseCoverLetterUrl) {
+      baseCoverLetter = {
+        fileUrl: settings[0].baseCoverLetterUrl,
+      };
+    }
   }
 
   return c.json(formatResponse(true, {
     ...profile[0],
     baseResume,
+    baseCoverLetter,
   }, null, requestId));
 });
 
@@ -172,20 +181,15 @@ userProfile.post('/base-cover-letter', async (c) => {
   const key = storage.generateKey(auth.userId, 'base-cover-letter', file.name);
   const fileUrl = await storage.uploadFile(key, buffer, file.type);
 
-  // For now, store the URL in settings metadata
-  // In a real implementation, you might want a separate table
-  const settings = await db
-    .select()
-    .from(userSettings)
-    .where(eq(userSettings.userId, auth.userId))
-    .limit(1);
+  // Update user settings to store the cover letter URL
+  await db
+    .update(userSettings)
+    .set({
+      baseCoverLetterUrl: fileUrl,
+      updatedAt: new Date(),
+    })
+    .where(eq(userSettings.userId, auth.userId));
 
-  if (settings.length === 0) {
-    throw new NotFoundError('User settings');
-  }
-
-  // TODO: Add baseCoverLetterUrl field to settings or create separate table
-  // For now, just return success
   return c.json(formatResponse(true, {
     filename: file.name,
     fileUrl,
@@ -214,7 +218,15 @@ userProfile.delete('/base-cover-letter', async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
 
-  // TODO: Implement when base cover letter storage is added
+  // Update user settings to remove base cover letter URL
+  await db
+    .update(userSettings)
+    .set({
+      baseCoverLetterUrl: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(userSettings.userId, auth.userId));
+
   return c.json(formatResponse(true, { message: 'Base cover letter removed' }, null, requestId));
 });
 
