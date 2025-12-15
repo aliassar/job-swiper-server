@@ -27,20 +27,20 @@ describe('Multi-Device Synchronization Tests', () => {
   describe('Job Status Updates', () => {
     it('should handle concurrent accept requests from different sessions', async () => {
       vi.spyOn(jobService, 'acceptJob').mockResolvedValue({
-        id: mockJobId,
-        status: 'accepted',
-        saved: false,
+        job: { id: mockJobId, company: 'Test', position: 'Developer' },
+        application: null,
+        workflow: null,
       } as any);
 
       // Simulate two concurrent requests from different sessions
-      const session1 = jobService.acceptJob(mockUserId, mockJobId, 'req-session-1');
-      const session2 = jobService.acceptJob(mockUserId, mockJobId, 'req-session-2');
+      const session1 = jobService.acceptJob(mockUserId, mockJobId);
+      const session2 = jobService.acceptJob(mockUserId, mockJobId);
 
       const results = await Promise.all([session1, session2]);
 
       // Both should succeed with the same result
-      expect(results[0].status).toBe('accepted');
-      expect(results[1].status).toBe('accepted');
+      expect(results[0].job).toBeDefined();
+      expect(results[1].job).toBeDefined();
     });
 
     it('should reflect status changes across sessions', async () => {
@@ -60,7 +60,7 @@ describe('Multi-Device Synchronization Tests', () => {
         ...mockJob,
         status: 'accepted',
       } as any);
-      await jobService.updateJobStatus(mockUserId, mockJobId, 'accepted', 'accept');
+      await jobService.updateJobStatus(mockUserId, mockJobId, 'accepted', 'accepted');
 
       // Session 1: Get updated status
       vi.spyOn(jobService, 'getJobWithStatus').mockResolvedValueOnce({
@@ -95,17 +95,16 @@ describe('Multi-Device Synchronization Tests', () => {
       // Mock application service update
       vi.spyOn(applicationService, 'updateApplicationStage').mockResolvedValue({
         id: mockApplicationId,
-        stage: 'interviewing',
+        stage: 'Applied',
       } as any);
 
       const result = await applicationService.updateApplicationStage(
         mockUserId,
         mockApplicationId,
-        'interviewing',
-        'Updated from session 2'
+        'Applied'
       );
 
-      expect(result.stage).toBe('interviewing');
+      expect(result.stage).toBe('Applied');
     });
   });
 
@@ -149,10 +148,11 @@ describe('Multi-Device Synchronization Tests', () => {
 
       // Session 2: Accept a job
       vi.spyOn(jobService, 'acceptJob').mockResolvedValue({
-        id: 'job-1',
-        status: 'accepted',
+        job: { id: 'job-1', company: 'Test' },
+        application: null,
+        workflow: null,
       } as any);
-      await jobService.acceptJob(mockUserId, 'job-1', 'req-123');
+      await jobService.acceptJob(mockUserId, 'job-1');
 
       // Session 1: Refresh pending jobs (should see one less job)
       vi.spyOn(jobService, 'getPendingJobs')

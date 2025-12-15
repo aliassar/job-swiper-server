@@ -112,15 +112,15 @@ describe('API Endpoint Reliability Tests', () => {
     describe('POST /api/jobs/:id/accept - Accept Job', () => {
       it('should accept a job successfully', async () => {
         vi.spyOn(jobService, 'acceptJob').mockResolvedValue({
-          id: mockJobId,
-          status: 'accepted',
-          saved: false,
+          job: { id: mockJobId, company: 'Test Corp', position: 'Engineer' },
+          application: { id: 'app-123', stage: 'applied' },
+          workflow: null,
         } as any);
 
-        const result = await jobService.acceptJob(mockUserId, mockJobId, 'req-123');
+        const result = await jobService.acceptJob(mockUserId, mockJobId);
 
-        expect(result.status).toBe('accepted');
-        expect(jobService.acceptJob).toHaveBeenCalledWith(mockUserId, mockJobId, 'req-123');
+        expect(result.job).toBeDefined();
+        expect(jobService.acceptJob).toHaveBeenCalledWith(mockUserId, mockJobId);
       });
     });
 
@@ -241,17 +241,16 @@ describe('API Endpoint Reliability Tests', () => {
       it('should update application stage successfully', async () => {
         vi.spyOn(applicationService, 'updateApplicationStage').mockResolvedValue({
           id: mockApplicationId,
-          stage: 'interviewing',
+          stage: 'Applied',
         } as any);
 
         const result = await applicationService.updateApplicationStage(
           mockUserId,
           mockApplicationId,
-          'interviewing',
-          'First round scheduled'
+          'Applied'
         );
 
-        expect(result.stage).toBe('interviewing');
+        expect(result.stage).toBe('Applied');
       });
     });
   });
@@ -347,17 +346,19 @@ describe('API Endpoint Reliability Tests', () => {
     it('should handle pagination correctly for all paginated endpoints', async () => {
       vi.spyOn(jobService, 'getSavedJobs').mockResolvedValue({
         items: [],
-        total: 100,
-        page: 2,
-        limit: 20,
-        totalPages: 5,
+        pagination: {
+          total: 100,
+          page: 2,
+          limit: 20,
+          totalPages: 5,
+        },
       } as any);
 
       const result = await jobService.getSavedJobs(mockUserId, 2, 20);
 
-      expect(result.page).toBe(2);
-      expect(result.limit).toBe(20);
-      expect(result.totalPages).toBe(5);
+      expect(result.pagination.page).toBe(2);
+      expect(result.pagination.limit).toBe(20);
+      expect(result.pagination.totalPages).toBe(5);
     });
   });
 
