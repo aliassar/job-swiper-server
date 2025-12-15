@@ -23,7 +23,7 @@ vi.mock('../middleware/logger', () => ({
 const { salaryNormalizationService } = await import(
   '../services/salary-normalization.service'
 );
-const { db: mockDb } = await import('../lib/db');
+const { db } = await import('../lib/db');
 
 describe('Salary Normalization Service', () => {
   beforeEach(() => {
@@ -46,14 +46,14 @@ describe('Salary Normalization Service', () => {
           },
         ]),
       };
-      mockDb.select.mockReturnValue(selectMock);
+      (db.select as any).mockReturnValue(selectMock);
 
       // Mock update
       const updateMock = {
         set: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue(undefined),
       };
-      mockDb.update.mockReturnValue(updateMock);
+      (db.update as any).mockReturnValue(updateMock);
 
       // Call the service
       const result = await salaryNormalizationService.normalizeSalaryForJob(
@@ -61,8 +61,8 @@ describe('Salary Normalization Service', () => {
       );
 
       expect(result).toBe(true);
-      expect(mockDb.select).toHaveBeenCalled();
-      expect(mockDb.update).toHaveBeenCalled();
+      expect(db.select).toHaveBeenCalled();
+      expect(db.update).toHaveBeenCalled();
       
       // Verify the correct salary values were set
       const setCall = updateMock.set.mock.calls[0][0];
@@ -84,13 +84,13 @@ describe('Salary Normalization Service', () => {
           },
         ]),
       };
-      mockDb.select.mockReturnValue(selectMock);
+      (db.select as any).mockReturnValue(selectMock);
 
       const updateMock = {
         set: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue(undefined),
       };
-      mockDb.update.mockReturnValue(updateMock);
+      (db.update as any).mockReturnValue(updateMock);
 
       await salaryNormalizationService.normalizeSalaryForJob(mockJobId);
 
@@ -105,14 +105,14 @@ describe('Salary Normalization Service', () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]),
       };
-      mockDb.select.mockReturnValue(selectMock);
+      (db.select as any).mockReturnValue(selectMock);
 
       const result = await salaryNormalizationService.normalizeSalaryForJob(
         'non-existent-id'
       );
 
       expect(result).toBe(false);
-      expect(mockDb.update).not.toHaveBeenCalled();
+      expect(db.update).not.toHaveBeenCalled();
     });
 
     it('should handle non-numeric salary', async () => {
@@ -128,13 +128,13 @@ describe('Salary Normalization Service', () => {
           },
         ]),
       };
-      mockDb.select.mockReturnValue(selectMock);
+      (db.select as any).mockReturnValue(selectMock);
 
       const updateMock = {
         set: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue(undefined),
       };
-      mockDb.update.mockReturnValue(updateMock);
+      (db.update as any).mockReturnValue(updateMock);
 
       await salaryNormalizationService.normalizeSalaryForJob(mockJobId);
 
@@ -156,13 +156,13 @@ describe('Salary Normalization Service', () => {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue(mockJobs),
       };
-      mockDb.select.mockReturnValue(selectMock);
+      (db.select as any).mockReturnValue(selectMock);
 
       const updateMock = {
         set: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue(undefined),
       };
-      mockDb.update.mockReturnValue(updateMock);
+      (db.update as any).mockReturnValue(updateMock);
 
       const result = await salaryNormalizationService.normalizeAllSalaries();
 
@@ -180,13 +180,13 @@ describe('Salary Normalization Service', () => {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue(mockJobs),
       };
-      mockDb.select.mockReturnValue(selectMock);
+      (db.select as any).mockReturnValue(selectMock);
 
       const updateMock = {
         set: vi.fn().mockReturnThis(),
         where: vi.fn().mockRejectedValue(new Error('Database error')),
       };
-      mockDb.update.mockReturnValue(updateMock);
+      (db.update as any).mockReturnValue(updateMock);
 
       const result = await salaryNormalizationService.normalizeAllSalaries();
 
