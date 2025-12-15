@@ -43,17 +43,20 @@ class EmailClient {
 
     try {
       // Generate plain text from HTML if not provided
-      // Note: This is a simple implementation. For production, consider using a library like 'html-to-text'
-      const plainText = options.text || options.html
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags
-        .replace(/<[^>]+>/g, '') // Remove HTML tags
-        .replace(/&nbsp;/g, ' ') // Replace &nbsp;
-        .replace(/&amp;/g, '&') // Replace &amp;
-        .replace(/&lt;/g, '<') // Replace &lt;
-        .replace(/&gt;/g, '>') // Replace &gt;
-        .replace(/&quot;/g, '"') // Replace &quot;
-        .trim();
+      // This is for email plain-text fallback only, not security sanitization
+      let plainText = options.text;
+      if (!plainText && options.html) {
+        plainText = options.html
+          .replace(/<[^>]+>/g, ' ') // Remove all HTML tags
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          // Decode HTML entities (order matters: decode specific entities before &amp;)
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&amp;/g, '&') // Decode &amp; last to handle pre-encoded entities
+          .trim();
+      }
 
       await this.transporter.sendMail({
         from: FROM_EMAIL,
