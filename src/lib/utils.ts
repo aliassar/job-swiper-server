@@ -31,3 +31,21 @@ export function parseBoolSafe(value: string | undefined, defaultValue: boolean):
   if (lower === 'false') return false;
   return defaultValue;
 }
+
+/**
+ * Extract S3 key from file URL
+ * Handles various URL formats safely
+ */
+export function extractS3KeyFromUrl(fileUrl: string): string {
+  try {
+    const url = new URL(fileUrl);
+    // Remove leading slash
+    return url.pathname.substring(1);
+  } catch (error) {
+    // If URL parsing fails, try simple split as fallback
+    const parts = fileUrl.split('/');
+    // Remove protocol and domain parts, join the rest
+    const keyParts = parts.slice(3); // Skip https:, '', domain
+    return keyParts.join('/');
+  }
+}
