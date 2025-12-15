@@ -16,8 +16,21 @@ export const workflowService = {
    * Create a new workflow run
    */
   async createWorkflowRun(userId: string, applicationId: string, jobId: string): Promise<any> {
-    const idempotencyKey = `workflow-${userId}-${applicationId}-${Date.now()}`;
+    // Use deterministic idempotency key to prevent duplicate workflows
+    const idempotencyKey = `workflow-${userId}-${applicationId}`;
     
+    // Check if workflow already exists
+    const existing = await db
+      .select()
+      .from(workflowRuns)
+      .where(eq(workflowRuns.idempotencyKey, idempotencyKey))
+      .limit(1);
+
+    if (existing.length > 0) {
+      logger.info({ workflowRunId: existing[0].id, applicationId }, 'Workflow run already exists, returning existing');
+      return existing[0];
+    }
+
     const [workflowRun] = await db
       .insert(workflowRuns)
       .values({

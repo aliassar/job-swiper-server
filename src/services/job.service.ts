@@ -73,6 +73,8 @@ export const jobService = {
     }
 
     // Add salary filter (basic implementation - would need parsing in production)
+    // TODO: For production, normalize salary data during insertion or add a separate numeric salary field
+    // Current implementation using REGEXP_REPLACE prevents index usage and will be slow on large datasets
     if (salaryMin || salaryMax) {
       // This is a simplified filter - in production you'd want to parse salary strings
       if (salaryMin) {
