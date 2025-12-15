@@ -129,7 +129,8 @@ export const credentialTransmissionService = {
 
   /**
    * Test connection to Stage Updater microservice
-   * Returns true if the service is reachable
+   * Performs an actual HTTP request to validate service availability
+   * Returns true if the service is reachable and responding
    */
   async testConnection(): Promise<boolean> {
     try {
@@ -140,11 +141,38 @@ export const credentialTransmissionService = {
         return false;
       }
 
-      // Simple health check - could be a dedicated endpoint
-      // For now, we'll just check if the base URL is reachable
-      return true;
+      // Attempt a simple health check request
+      // Using a short timeout to avoid blocking
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      try {
+        const response = await fetch(`${serviceUrl}/health`, {
+          method: 'GET',
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          logger.info('Stage Updater connection test successful');
+          return true;
+        } else {
+          logger.warn(
+            { status: response.status },
+            'Stage Updater health check returned non-OK status'
+          );
+          return false;
+        }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
     } catch (error) {
-      logger.error({ error }, 'Stage Updater connection test failed');
+      logger.error(
+        { error: error instanceof Error ? error.message : 'Unknown error' },
+        'Stage Updater connection test failed'
+      );
       return false;
     }
   },

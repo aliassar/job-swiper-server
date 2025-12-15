@@ -223,16 +223,51 @@ describe('Credential Transmission Service', () => {
   });
 
   describe('testConnection', () => {
-    it('should return true when service URL is configured', async () => {
+    it('should return true when service is reachable', async () => {
       process.env.STAGE_UPDATER_SERVICE_URL = 'https://stage-updater.example.com';
+      
+      // Mock fetch to return OK response
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+      });
       
       const result = await credentialTransmissionService.testConnection();
       
       expect(result).toBe(true);
+      expect(fetch).toHaveBeenCalledWith(
+        'https://stage-updater.example.com/health',
+        expect.objectContaining({ method: 'GET' })
+      );
+    });
+
+    it('should return false when service returns error status', async () => {
+      process.env.STAGE_UPDATER_SERVICE_URL = 'https://stage-updater.example.com';
+      
+      // Mock fetch to return error response
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+      });
+      
+      const result = await credentialTransmissionService.testConnection();
+      
+      expect(result).toBe(false);
     });
 
     it('should return false when service URL is not configured', async () => {
       delete process.env.STAGE_UPDATER_SERVICE_URL;
+      
+      const result = await credentialTransmissionService.testConnection();
+      
+      expect(result).toBe(false);
+    });
+
+    it('should return false when network request fails', async () => {
+      process.env.STAGE_UPDATER_SERVICE_URL = 'https://stage-updater.example.com';
+      
+      // Mock fetch to throw network error
+      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
       
       const result = await credentialTransmissionService.testConnection();
       
