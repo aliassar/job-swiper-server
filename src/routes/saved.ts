@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { jobService } from '../services/job.service';
 import { formatResponse, parseIntSafe } from '../lib/utils';
+import { ValidationError } from '../lib/errors';
 
 const saved = new Hono<AppContext>();
 
@@ -16,6 +17,40 @@ saved.get('/', async (c) => {
   const result = await jobService.getSavedJobs(auth.userId, page, limit, search);
 
   return c.json(formatResponse(true, result, null, requestId));
+});
+
+// GET /api/saved/export - Export saved jobs to CSV or PDF
+saved.get('/export', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const format = c.req.query('format');
+  const search = c.req.query('search');
+
+  if (!format || !['csv', 'pdf'].includes(format)) {
+    throw new ValidationError('Invalid format. Must be csv or pdf.');
+  }
+
+  // Get all saved jobs (no pagination for export)
+  const result = await jobService.getSavedJobs(auth.userId, 1, 10000, search);
+
+  if (format === 'csv') {
+    const csvContent = await jobService.exportSavedJobsToCSV(result.items);
+    
+    c.header('Content-Type', 'text/csv');
+    c.header('Content-Disposition', `attachment; filename="saved-jobs-${Date.now()}.csv"`);
+    return c.body(csvContent);
+  } else {
+    const pdfBuffer = await jobService.exportSavedJobsToPDF(result.items);
+    
+    c.header('Content-Type', 'application/pdf');
+    c.header('Content-Disposition', `attachment; filename="saved-jobs-${Date.now()}.pdf"`);
+    return new Response(pdfBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="saved-jobs-${Date.now()}.pdf"`,
+      },
+    });
+  }
 });
 
 export default saved;
