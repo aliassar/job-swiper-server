@@ -7,6 +7,7 @@ import { applicationService } from './application.service';
 import { notificationService } from './notification.service';
 import { timerService } from './timer.service';
 import { storage } from '../lib/storage';
+import { extractS3KeyFromUrl } from '../lib/utils';
 
 export interface Timer {
   id: string;
@@ -189,7 +190,7 @@ export const timerHandlers = {
           if (resume.length > 0) {
             // Delete from storage
             try {
-              const key = resume[0].fileUrl.split('.com/')[1]; // Extract S3 key from URL
+              const key = extractS3KeyFromUrl(resume[0].fileUrl);
               await storage.deleteFile(key);
             } catch (error) {
               logger.error({ error, resumeId }, 'Error deleting resume from storage');
@@ -223,7 +224,7 @@ export const timerHandlers = {
           if (coverLetter.length > 0) {
             // Delete from storage
             try {
-              const key = coverLetter[0].fileUrl.split('.com/')[1]; // Extract S3 key from URL
+              const key = extractS3KeyFromUrl(coverLetter[0].fileUrl);
               await storage.deleteFile(key);
             } catch (error) {
               logger.error({ error, coverLetterId }, 'Error deleting cover letter from storage');

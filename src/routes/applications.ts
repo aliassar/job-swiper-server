@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { AppContext } from '../types';
 import { applicationService } from '../services/application.service';
-import { formatResponse, parseIntSafe } from '../lib/utils';
+import { formatResponse, parseIntSafe, extractS3KeyFromUrl } from '../lib/utils';
 import { ValidationError } from '../lib/errors';
 import { storage } from '../lib/storage';
 
@@ -188,7 +188,7 @@ applications.get('/:id/download/resume', async (c) => {
   }
 
   // Get presigned URL for download
-  const key = application.generatedResume.fileUrl.split('.com/')[1];
+  const key = extractS3KeyFromUrl(application.generatedResume.fileUrl);
   const downloadUrl = await storage.getPresignedUrl(key);
 
   return c.redirect(downloadUrl);
@@ -206,7 +206,7 @@ applications.get('/:id/download/cover-letter', async (c) => {
   }
 
   // Get presigned URL for download
-  const key = application.generatedCoverLetter.fileUrl.split('.com/')[1];
+  const key = extractS3KeyFromUrl(application.generatedCoverLetter.fileUrl);
   const downloadUrl = await storage.getPresignedUrl(key);
 
   return c.redirect(downloadUrl);

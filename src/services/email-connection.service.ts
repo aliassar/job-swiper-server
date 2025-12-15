@@ -342,11 +342,14 @@ export const emailConnectionService = {
 
   /**
    * Test IMAP connection
+   * TODO: Implement actual IMAP connection test using nodemailer or similar library
+   * For production, this should validate credentials before saving
    */
   async testImapConnection(host: string, port: number, username: string, password: string): Promise<boolean> {
-    // TODO: Implement actual IMAP connection test
-    // For now, just return true
-    logger.info({ host, port, username }, 'Testing IMAP connection (mock)');
+    // Mock implementation - in production, would use nodemailer to test connection:
+    // const transporter = nodemailer.createTransport({ host, port, auth: { user: username, pass: password }});
+    // await transporter.verify();
+    logger.warn({ host, port, username }, 'IMAP connection test is mocked - implement for production');
     return true;
   },
 
