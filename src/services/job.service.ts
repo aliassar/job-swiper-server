@@ -9,6 +9,11 @@ import type { JobFilterRequest, JobFilterResponse, FilterType } from '../lib/mic
 import PDFDocument from 'pdfkit';
 import { escapeLikePattern } from '../lib/utils';
 
+// Type guard for database errors
+function isDatabaseError(error: unknown): error is { code?: string; constraint?: string } {
+  return typeof error === 'object' && error !== null && ('code' in error || 'constraint' in error);
+}
+
 export const jobService = {
   async getPendingJobs(
     userId: string,
@@ -447,8 +452,7 @@ export const jobService = {
           application = newApp;
         } catch (error: unknown) {
           // Check if it's a unique constraint violation (duplicate application)
-          const dbError = error as { code?: string; constraint?: string };
-          if (dbError?.code === '23505' || dbError?.constraint === 'applications_user_id_job_id_unique') {
+          if (isDatabaseError(error) && (error.code === '23505' || error.constraint === 'applications_user_id_job_id_unique')) {
             logger.warn({ userId, jobId }, 'Application already exists for this user and job (race condition prevented)');
             // Fetch the existing application that was created by the concurrent request
             const [existingApp] = await tx
