@@ -59,13 +59,12 @@ reported.get('/', async (c) => {
   let countWhereConditions: SQL<unknown> | undefined = eq(reportedJobs.userId, auth.userId);
 
   if (search) {
-    const escapedSearch = escapeLikePattern(search);
     countWhereConditions = and(
       countWhereConditions,
       sql`EXISTS (
         SELECT 1 FROM ${jobs} 
         WHERE ${jobs.id} = ${reportedJobs.jobId} 
-        AND (${like(jobs.company, `%${escapedSearch}%`)} OR ${like(jobs.position, `%${escapedSearch}%`)})
+        AND (${like(jobs.company, `%${escapeLikePattern(search)}%`)} OR ${like(jobs.position, `%${escapeLikePattern(search)}%`)})
       )`
     );
   }
