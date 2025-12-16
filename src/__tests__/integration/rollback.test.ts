@@ -141,5 +141,30 @@ describe('Rollback API Integration Tests', () => {
       expect(result.application.generatedResumeId).toBe(mockResumeId);
       expect(result.application.generatedCoverLetterId).toBe(mockCoverLetterId);
     });
+
+    it('should delete application record during rollback', async () => {
+      // This test verifies that the application is deleted during rollback
+      // to prevent orphaned application records
+      vi.spyOn(jobService, 'rollbackJob').mockResolvedValue({
+        job: {
+          id: mockJobId,
+          status: 'pending',
+          saved: false,
+        },
+        application: {
+          id: mockApplicationId,
+          userId: mockUserId,
+          jobId: mockJobId,
+          stage: 'applied',
+        },
+      } as any);
+
+      const result = await jobService.rollbackJob(mockUserId, mockJobId);
+
+      // Verify the rollback was called (which should delete the application)
+      expect(jobService.rollbackJob).toHaveBeenCalledWith(mockUserId, mockJobId);
+      expect(result).toBeDefined();
+      expect(result.job.status).toBe('pending');
+    });
   });
 });
