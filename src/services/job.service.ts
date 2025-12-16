@@ -167,7 +167,7 @@ export const jobService = {
     jobId: string,
     status: 'pending' | 'accepted' | 'rejected' | 'skipped',
     actionType: 'accepted' | 'rejected' | 'skipped' | 'saved' | 'unsaved' | 'rollback' | 'report' | 'unreport',
-    tx?: any
+    tx?: any // Transaction context when called within a transaction
   ) {
     const dbContext = tx || db;
     const job = await this.getJobWithStatus(userId, jobId);
@@ -445,9 +445,10 @@ export const jobService = {
             })
             .returning();
           application = newApp;
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Check if it's a unique constraint violation (duplicate application)
-          if (error?.code === '23505' || error?.constraint === 'applications_user_id_job_id_unique') {
+          const dbError = error as { code?: string; constraint?: string };
+          if (dbError?.code === '23505' || dbError?.constraint === 'applications_user_id_job_id_unique') {
             logger.warn({ userId, jobId }, 'Application already exists for this user and job (race condition prevented)');
             // Fetch the existing application that was created by the concurrent request
             const [existingApp] = await tx
