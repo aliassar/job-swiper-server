@@ -32,6 +32,9 @@ const resetPasswordSchema = z.object({
   newPassword: z.string().min(8),
 });
 
+// Helper function to get frontend URL
+const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000';
+
 // POST /auth/register - Email/password signup
 auth.post('/register', async (c) => {
   const requestId = c.get('requestId');
@@ -167,28 +170,18 @@ auth.get('/google', async (c) => {
 // GET /auth/google/callback - Google OAuth callback
 auth.get('/google/callback', async (c) => {
   try {
-    const requestId = c.get('requestId');
     const code = c.req.query('code');
 
     if (!code) {
       throw new ValidationError('Missing authorization code');
     }
 
-    const { user, token } = await authService.googleOAuthCallback(code);
+    const { token } = await authService.googleOAuthCallback(code);
 
-    return c.json(
-      formatResponse(
-        true,
-        {
-          user,
-          token,
-        },
-        null,
-        requestId
-      )
-    );
+    const frontendUrl = getFrontendUrl();
+    return c.redirect(`${frontendUrl}/auth/callback?token=${token}&provider=google`);
   } catch (error) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = getFrontendUrl();
     const errorMessage = encodeURIComponent(
       error instanceof Error ? error.message : 'OAuth authentication failed'
     );
@@ -213,28 +206,18 @@ auth.get('/github', async (c) => {
 // GET /auth/github/callback - GitHub OAuth callback
 auth.get('/github/callback', async (c) => {
   try {
-    const requestId = c.get('requestId');
     const code = c.req.query('code');
 
     if (!code) {
       throw new ValidationError('Missing authorization code');
     }
 
-    const { user, token } = await authService.githubOAuthCallback(code);
+    const { token } = await authService.githubOAuthCallback(code);
 
-    return c.json(
-      formatResponse(
-        true,
-        {
-          user,
-          token,
-        },
-        null,
-        requestId
-      )
-    );
+    const frontendUrl = getFrontendUrl();
+    return c.redirect(`${frontendUrl}/auth/callback?token=${token}&provider=github`);
   } catch (error) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = getFrontendUrl();
     const errorMessage = encodeURIComponent(
       error instanceof Error ? error.message : 'OAuth authentication failed'
     );
