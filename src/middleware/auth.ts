@@ -37,7 +37,7 @@ export async function authMiddleware(c: Context<AppContext>, next: Next) {
       requestId,
       event: 'auth_failed',
       reason: 'placeholder_token',
-      token: token.substring(0, 20), // Log partial token for debugging
+      tokenLength: token.length, // Log token length for debugging
     }, 'Authentication failed - placeholder or invalid token detected');
     
     throw new AuthenticationError('Invalid authentication token. Please login to get a valid JWT token.');

@@ -129,11 +129,15 @@ CRON_SECRET=<generate-with-openssl-rand-base64-32>
 
 ### Generate Secure Keys
 
+Use these commands to generate cryptographically secure secrets:
+
 ```bash
 # Generate JWT_SECRET, ADMIN_API_KEY, WEBHOOK_SECRET, CRON_SECRET
+# This generates a 32-byte base64-encoded key suitable for JWT secrets and API keys
 openssl rand -base64 32
 
-# Generate ENCRYPTION_KEY
+# Generate ENCRYPTION_KEY (32 bytes for AES-256 encryption)
+# This generates a key specifically for encrypting sensitive data like email passwords
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
