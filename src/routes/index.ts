@@ -24,22 +24,66 @@ import admin from './admin';
 
 const api = new Hono<AppContext>();
 
+// Health check cache to reduce database load
+let healthCheckCache: {
+  status: string;
+  lastCheck: number;
+  dbStatus: string;
+  dbError?: string;
+} = {
+  status: 'unknown',
+  lastCheck: 0,
+  dbStatus: 'unknown',
+};
+
+const HEALTH_CHECK_CACHE_TTL = 30000; // 30 seconds
+
 // Health check (no auth required)
 api.get('/health', async (c) => {
+  const requestId = c.get('requestId');
+  const now = Date.now();
+  
+  // Use cached health status if available and fresh
+  if (now - healthCheckCache.lastCheck < HEALTH_CHECK_CACHE_TTL) {
+    const isHealthy = healthCheckCache.dbStatus === 'healthy';
+    return c.json(
+      {
+        success: isHealthy,
+        data: {
+          status: isHealthy ? 'healthy' : 'degraded',
+          timestamp: new Date().toISOString(),
+          database: healthCheckCache.dbStatus,
+          cached: true,
+          ...(healthCheckCache.dbError && { dbError: healthCheckCache.dbError }),
+        },
+        error: null,
+        requestId,
+      },
+      isHealthy ? 200 : 503
+    );
+  }
+  
+  // Perform actual database check
   const { db } = await import('../lib/db');
   const { sql } = await import('drizzle-orm');
-  const requestId = c.get('requestId');
   
   let dbStatus = 'healthy';
-  let dbError = null;
+  let dbError = undefined;
   
   try {
-    // Simple database connectivity check
     await db.execute(sql`SELECT 1`);
   } catch (error) {
     dbStatus = 'unhealthy';
     dbError = error instanceof Error ? error.message : 'Unknown database error';
   }
+  
+  // Update cache
+  healthCheckCache = {
+    status: dbStatus === 'healthy' ? 'healthy' : 'degraded',
+    lastCheck: now,
+    dbStatus,
+    dbError,
+  };
   
   const isHealthy = dbStatus === 'healthy';
   
@@ -50,6 +94,7 @@ api.get('/health', async (c) => {
         status: isHealthy ? 'healthy' : 'degraded',
         timestamp: new Date().toISOString(),
         database: dbStatus,
+        cached: false,
         ...(dbError && { dbError }),
       },
       error: null,
