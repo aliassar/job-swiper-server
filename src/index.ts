@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { AppContext } from './types';
 import { requestIdMiddleware } from './middleware/request-id';
 import { loggerMiddleware } from './middleware/logger';
@@ -7,6 +8,14 @@ import { errorHandler } from './middleware/error-handler';
 import api from './routes';
 
 const app = new Hono<AppContext>();
+
+// CORS middleware - must be first
+app.use('*', cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
 
 // Global middleware
 app.use('*', requestIdMiddleware);

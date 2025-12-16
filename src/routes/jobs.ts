@@ -4,6 +4,7 @@ import { AppContext } from '../types';
 import { jobService } from '../services/job.service';
 import { formatResponse, parseIntSafe } from '../lib/utils';
 import { ValidationError } from '../lib/errors';
+import { validateUuidParam } from '../middleware/validate-params';
 
 const jobs = new Hono<AppContext>();
 
@@ -62,7 +63,7 @@ jobs.get('/skipped', async (c) => {
 });
 
 // POST /api/jobs/:id/accept - Accept a job
-jobs.post('/:id/accept', async (c) => {
+jobs.post('/:id/accept', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const jobId = c.req.param('id');
@@ -94,7 +95,7 @@ jobs.post('/:id/accept', async (c) => {
 });
 
 // POST /api/jobs/:id/reject - Reject a job
-jobs.post('/:id/reject', async (c) => {
+jobs.post('/:id/reject', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const jobId = c.req.param('id');
@@ -105,7 +106,7 @@ jobs.post('/:id/reject', async (c) => {
 });
 
 // POST /api/jobs/:id/skip - Skip a job
-jobs.post('/:id/skip', async (c) => {
+jobs.post('/:id/skip', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const jobId = c.req.param('id');
@@ -116,7 +117,7 @@ jobs.post('/:id/skip', async (c) => {
 });
 
 // POST /api/jobs/:id/save - Toggle save status
-jobs.post('/:id/save', async (c) => {
+jobs.post('/:id/save', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const jobId = c.req.param('id');
@@ -127,7 +128,7 @@ jobs.post('/:id/save', async (c) => {
 });
 
 // DELETE /api/jobs/:id/save - Unsave a job
-jobs.delete('/:id/save', async (c) => {
+jobs.delete('/:id/save', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const jobId = c.req.param('id');
@@ -138,7 +139,7 @@ jobs.delete('/:id/save', async (c) => {
 });
 
 // POST /api/jobs/:id/rollback - Rollback decision
-jobs.post('/:id/rollback', async (c) => {
+jobs.post('/:id/rollback', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const jobId = c.req.param('id');
@@ -149,7 +150,7 @@ jobs.post('/:id/rollback', async (c) => {
 });
 
 // POST /api/jobs/:id/report - Report a job
-jobs.post('/:id/report', async (c) => {
+jobs.post('/:id/report', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const jobId = c.req.param('id');
@@ -172,7 +173,7 @@ jobs.post('/:id/report', async (c) => {
 });
 
 // POST /api/jobs/:id/unreport - Remove report
-jobs.post('/:id/unreport', async (c) => {
+jobs.post('/:id/unreport', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const jobId = c.req.param('id');

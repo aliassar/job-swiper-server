@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
+import { adminAuthMiddleware } from '../middleware/admin-auth';
 import auth from './auth';
 import jobs from './jobs';
 import applications from './applications';
@@ -24,20 +25,45 @@ import admin from './admin';
 const api = new Hono<AppContext>();
 
 // Health check (no auth required)
-api.get('/health', (c) => {
-  return c.json({
-    success: true,
-    data: {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
+api.get('/health', async (c) => {
+  const { db } = await import('../lib/db');
+  const { sql } = await import('drizzle-orm');
+  const requestId = c.get('requestId');
+  
+  let dbStatus = 'healthy';
+  let dbError = null;
+  
+  try {
+    // Simple database connectivity check
+    await db.execute(sql`SELECT 1`);
+  } catch (error) {
+    dbStatus = 'unhealthy';
+    dbError = error instanceof Error ? error.message : 'Unknown database error';
+  }
+  
+  const isHealthy = dbStatus === 'healthy';
+  
+  return c.json(
+    {
+      success: isHealthy,
+      data: {
+        status: isHealthy ? 'healthy' : 'degraded',
+        timestamp: new Date().toISOString(),
+        database: dbStatus,
+        ...(dbError && { dbError }),
+      },
+      error: null,
+      requestId,
     },
-  });
+    isHealthy ? 200 : 503
+  );
 });
 
 // Sync endpoint (no auth required for cron)
 api.route('/sync', sync);
 
-// Admin endpoints (no auth required - should be protected by network rules in production)
+// Admin endpoints (protected by admin authentication)
+api.use('/admin/*', adminAuthMiddleware);
 api.route('/admin', admin);
 
 // Auth endpoints (no auth required)
