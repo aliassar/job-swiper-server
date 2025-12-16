@@ -2,8 +2,23 @@ import { Context, Next } from 'hono';
 import { RateLimitError } from '../lib/errors';
 import { logger } from './logger';
 
-// Simple in-memory rate limiter
-// In production, use Redis or similar
+/**
+ * Simple in-memory rate limiter
+ * 
+ * WARNING: This implementation uses in-memory storage which has limitations in serverless environments:
+ * - Each serverless function instance maintains its own rate limit state
+ * - State is not shared across multiple instances or regions
+ * - State is reset when the function instance is terminated
+ * - For production use with serverless, consider using a stateless approach or external store like:
+ *   - Redis (e.g., Upstash Redis for serverless)
+ *   - DynamoDB or similar distributed key-value store
+ *   - Edge KV storage (e.g., Cloudflare KV, Vercel KV)
+ * 
+ * This implementation is suitable for:
+ * - Development and testing environments
+ * - Single-instance deployments
+ * - Basic rate limiting where exact enforcement isn't critical
+ */
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 const RATE_LIMIT = parseInt(process.env.RATE_LIMIT_MAX || '100', 10); // requests per window
