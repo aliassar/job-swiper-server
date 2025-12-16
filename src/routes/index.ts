@@ -158,6 +158,7 @@ api.route('/auth', auth);
 api.route('/webhooks', webhooks);
 
 // All other routes require authentication
+api.use('/jobs', authMiddleware);
 api.use('/jobs/*', authMiddleware);
 api.use('/applications/*', authMiddleware);
 api.use('/application-history/*', authMiddleware);
