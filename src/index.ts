@@ -43,4 +43,17 @@ app.get('/', (c) => {
 // Error handler
 app.onError(errorHandler);
 
+// Start local development server if not in serverless environment
+// This allows running the server locally with: npm run dev
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  const { serve } = await import('@hono/node-server');
+  const port = parseInt(process.env.PORT || '5000', 10);
+  
+  console.log(`🚀 Server starting on http://localhost:${port}`);
+  serve({
+    fetch: app.fetch,
+    port,
+  });
+}
+
 export default app;
