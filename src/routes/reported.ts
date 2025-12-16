@@ -2,18 +2,27 @@ import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { db } from '../lib/db';
 import { reportedJobs, jobs } from '../db/schema';
-import { formatResponse, parseIntSafe } from '../lib/utils';
+import { formatResponse, parseIntSafe, sanitizeSearchInput, escapeLikePattern } from '../lib/utils';
 import { eq, desc, sql, and, or, like, SQL } from 'drizzle-orm';
 
 const reported = new Hono<AppContext>();
 
-// GET /api/reported - Get reported jobs
+/**
+ * GET /api/reported - Get reported jobs
+ * 
+ * Query parameters:
+ * @param page - Page number (default: 1)
+ * @param limit - Results per page (default: 20)
+ * @param search - Optional search term
+ * 
+ * @returns Paginated list of reported jobs with job details
+ */
 reported.get('/', async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const page = parseIntSafe(c.req.query('page'), 1);
   const limit = parseIntSafe(c.req.query('limit'), 20);
-  const search = c.req.query('search');
+  const search = sanitizeSearchInput(c.req.query('search'));
 
   const offset = (page - 1) * limit;
 
@@ -36,7 +45,10 @@ reported.get('/', async (c) => {
       search
         ? and(
             whereConditions,
-            or(like(jobs.company, `%${search}%`), like(jobs.position, `%${search}%`))
+            or(
+              like(jobs.company, `%${escapeLikePattern(search)}%`),
+              like(jobs.position, `%${escapeLikePattern(search)}%`)
+            )
           )
         : whereConditions
     )
@@ -52,7 +64,7 @@ reported.get('/', async (c) => {
       sql`EXISTS (
         SELECT 1 FROM ${jobs} 
         WHERE ${jobs.id} = ${reportedJobs.jobId} 
-        AND (${like(jobs.company, `%${search}%`)} OR ${like(jobs.position, `%${search}%`)})
+        AND (${like(jobs.company, `%${escapeLikePattern(search)}%`)} OR ${like(jobs.position, `%${escapeLikePattern(search)}%`)})
       )`
     );
   }
