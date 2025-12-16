@@ -5,6 +5,7 @@ import { applicationService } from '../services/application.service';
 import { formatResponse, parseIntSafe, extractS3KeyFromUrl } from '../lib/utils';
 import { ValidationError } from '../lib/errors';
 import { storage } from '../lib/storage';
+import { validateUuidParam } from '../middleware/validate-params';
 
 const applications = new Hono<AppContext>();
 
@@ -53,7 +54,7 @@ applications.get('/', async (c) => {
 });
 
 // GET /api/applications/:id - Full details with job and docs
-applications.get('/:id', async (c) => {
+applications.get('/:id', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
@@ -64,7 +65,7 @@ applications.get('/:id', async (c) => {
 });
 
 // PUT /api/applications/:id/stage - Update application stage
-applications.put('/:id/stage', async (c) => {
+applications.put('/:id/stage', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
@@ -86,7 +87,7 @@ applications.put('/:id/stage', async (c) => {
 });
 
 // PUT /api/applications/:id/notes - Update notes
-applications.put('/:id/notes', async (c) => {
+applications.put('/:id/notes', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
@@ -108,7 +109,7 @@ applications.put('/:id/notes', async (c) => {
 });
 
 // POST /api/applications/:id/cv/confirm - Confirm CV
-applications.post('/:id/cv/confirm', async (c) => {
+applications.post('/:id/cv/confirm', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
@@ -119,7 +120,7 @@ applications.post('/:id/cv/confirm', async (c) => {
 });
 
 // POST /api/applications/:id/cv/reupload - Reupload CV
-applications.post('/:id/cv/reupload', async (c) => {
+applications.post('/:id/cv/reupload', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
@@ -149,7 +150,7 @@ applications.post('/:id/cv/reupload', async (c) => {
 });
 
 // POST /api/applications/:id/message/confirm - Confirm message
-applications.post('/:id/message/confirm', async (c) => {
+applications.post('/:id/message/confirm', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
@@ -160,7 +161,7 @@ applications.post('/:id/message/confirm', async (c) => {
 });
 
 // PUT /api/applications/:id/message - Edit message
-applications.put('/:id/message', async (c) => {
+applications.put('/:id/message', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
@@ -182,7 +183,7 @@ applications.put('/:id/message', async (c) => {
 });
 
 // GET /api/applications/:id/download/resume - Download generated resume
-applications.get('/:id/download/resume', async (c) => {
+applications.get('/:id/download/resume', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const applicationId = c.req.param('id');
 
@@ -200,7 +201,7 @@ applications.get('/:id/download/resume', async (c) => {
 });
 
 // GET /api/applications/:id/download/cover-letter - Download cover letter
-applications.get('/:id/download/cover-letter', async (c) => {
+applications.get('/:id/download/cover-letter', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const applicationId = c.req.param('id');
 
@@ -218,7 +219,7 @@ applications.get('/:id/download/cover-letter', async (c) => {
 });
 
 // POST /api/applications/:id/toggle-auto-status - Toggle auto status for application
-applications.post('/:id/toggle-auto-status', async (c) => {
+applications.post('/:id/toggle-auto-status', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
@@ -229,7 +230,7 @@ applications.post('/:id/toggle-auto-status', async (c) => {
 });
 
 // GET /api/applications/:id/documents - Get application documents
-applications.get('/:id/documents', async (c) => {
+applications.get('/:id/documents', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
@@ -255,7 +256,7 @@ applications.get('/:id/documents', async (c) => {
 });
 
 // PUT /api/applications/:id/documents - Update custom document URLs
-applications.put('/:id/documents', async (c) => {
+applications.put('/:id/documents', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');

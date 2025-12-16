@@ -166,26 +166,34 @@ auth.get('/google', async (c) => {
 
 // GET /auth/google/callback - Google OAuth callback
 auth.get('/google/callback', async (c) => {
-  const requestId = c.get('requestId');
-  const code = c.req.query('code');
+  try {
+    const requestId = c.get('requestId');
+    const code = c.req.query('code');
 
-  if (!code) {
-    throw new ValidationError('Missing authorization code');
+    if (!code) {
+      throw new ValidationError('Missing authorization code');
+    }
+
+    const { user, token } = await authService.googleOAuthCallback(code);
+
+    return c.json(
+      formatResponse(
+        true,
+        {
+          user,
+          token,
+        },
+        null,
+        requestId
+      )
+    );
+  } catch (error) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const errorMessage = encodeURIComponent(
+      error instanceof Error ? error.message : 'OAuth authentication failed'
+    );
+    return c.redirect(`${frontendUrl}/auth/error?message=${errorMessage}`);
   }
-
-  const { user, token } = await authService.googleOAuthCallback(code);
-
-  return c.json(
-    formatResponse(
-      true,
-      {
-        user,
-        token,
-      },
-      null,
-      requestId
-    )
-  );
 });
 
 // GET /auth/github - GitHub OAuth initiation
@@ -204,26 +212,34 @@ auth.get('/github', async (c) => {
 
 // GET /auth/github/callback - GitHub OAuth callback
 auth.get('/github/callback', async (c) => {
-  const requestId = c.get('requestId');
-  const code = c.req.query('code');
+  try {
+    const requestId = c.get('requestId');
+    const code = c.req.query('code');
 
-  if (!code) {
-    throw new ValidationError('Missing authorization code');
+    if (!code) {
+      throw new ValidationError('Missing authorization code');
+    }
+
+    const { user, token } = await authService.githubOAuthCallback(code);
+
+    return c.json(
+      formatResponse(
+        true,
+        {
+          user,
+          token,
+        },
+        null,
+        requestId
+      )
+    );
+  } catch (error) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const errorMessage = encodeURIComponent(
+      error instanceof Error ? error.message : 'OAuth authentication failed'
+    );
+    return c.redirect(`${frontendUrl}/auth/error?message=${errorMessage}`);
   }
-
-  const { user, token } = await authService.githubOAuthCallback(code);
-
-  return c.json(
-    formatResponse(
-      true,
-      {
-        user,
-        token,
-      },
-      null,
-      requestId
-    )
-  );
 });
 
 // POST /auth/logout - Logout (client-side token removal)
