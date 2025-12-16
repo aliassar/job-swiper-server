@@ -8,6 +8,15 @@ import { jobFilterClient } from '../lib/microservice-client';
 import type { JobFilterRequest, JobFilterResponse, FilterType } from '../lib/microservices';
 import PDFDocument from 'pdfkit';
 
+/**
+ * Escape special characters in LIKE patterns to prevent unexpected behavior
+ * @param pattern - The search pattern to escape
+ * @returns Escaped pattern safe for use in LIKE queries
+ */
+function escapeLikePattern(pattern: string): string {
+  return pattern.replace(/[%_\\]/g, '\\$&');
+}
+
 export const jobService = {
   async getPendingJobs(
     userId: string,
@@ -58,17 +67,19 @@ export const jobService = {
 
     // Add search if provided
     if (search) {
+      const escapedSearch = escapeLikePattern(search);
       query = query.where(
         or(
-          like(jobs.company, `%${search}%`),
-          like(jobs.position, `%${search}%`)
+          like(jobs.company, `%${escapedSearch}%`),
+          like(jobs.position, `%${escapedSearch}%`)
         )
       );
     }
 
     // Add location filter
     if (location) {
-      query = query.where(like(jobs.location, `%${location}%`));
+      const escapedLocation = escapeLikePattern(location);
+      query = query.where(like(jobs.location, `%${escapedLocation}%`));
     }
 
     // Add salary filter using numeric fields for better performance
@@ -245,11 +256,12 @@ export const jobService = {
     let whereConditions: SQL<unknown> | undefined = and(eq(userJobStatus.userId, userId), eq(userJobStatus.saved, true));
     
     if (search) {
+      const escapedSearch = escapeLikePattern(search);
       whereConditions = and(
         whereConditions,
         or(
-          like(jobs.company, `%${search}%`),
-          like(jobs.position, `%${search}%`)
+          like(jobs.company, `%${escapedSearch}%`),
+          like(jobs.position, `%${escapedSearch}%`)
         )
       );
     }
@@ -276,12 +288,13 @@ export const jobService = {
     let countWhereConditions: SQL<unknown> | undefined = and(eq(userJobStatus.userId, userId), eq(userJobStatus.saved, true));
     
     if (search) {
+      const escapedSearch = escapeLikePattern(search);
       countWhereConditions = and(
         countWhereConditions,
         sql`EXISTS (
           SELECT 1 FROM ${jobs} 
           WHERE ${jobs.id} = ${userJobStatus.jobId} 
-          AND (${like(jobs.company, `%${search}%`)} OR ${like(jobs.position, `%${search}%`)})
+          AND (${like(jobs.company, `%${escapedSearch}%`)} OR ${like(jobs.position, `%${escapedSearch}%`)})
         )`
       );
     }
@@ -310,11 +323,12 @@ export const jobService = {
     let whereConditions: SQL<unknown> | undefined = and(eq(userJobStatus.userId, userId), eq(userJobStatus.status, 'skipped'));
     
     if (search) {
+      const escapedSearch = escapeLikePattern(search);
       whereConditions = and(
         whereConditions,
         or(
-          like(jobs.company, `%${search}%`),
-          like(jobs.position, `%${search}%`)
+          like(jobs.company, `%${escapedSearch}%`),
+          like(jobs.position, `%${escapedSearch}%`)
         )
       );
     }
@@ -337,12 +351,13 @@ export const jobService = {
     let countWhereConditions: SQL<unknown> | undefined = and(eq(userJobStatus.userId, userId), eq(userJobStatus.status, 'skipped'));
     
     if (search) {
+      const escapedSearch = escapeLikePattern(search);
       countWhereConditions = and(
         countWhereConditions,
         sql`EXISTS (
           SELECT 1 FROM ${jobs} 
           WHERE ${jobs.id} = ${userJobStatus.jobId} 
-          AND (${like(jobs.company, `%${search}%`)} OR ${like(jobs.position, `%${search}%`)})
+          AND (${like(jobs.company, `%${escapedSearch}%`)} OR ${like(jobs.position, `%${escapedSearch}%`)})
         )`
       );
     }
