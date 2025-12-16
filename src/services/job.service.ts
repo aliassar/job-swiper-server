@@ -509,6 +509,13 @@ export const jobService = {
         );
       }
 
+      // Delete the application record
+      await tx
+        .delete(applications)
+        .where(eq(applications.id, app.id));
+
+      logger.info({ userId, jobId, applicationId: app.id }, 'Application deleted during rollback');
+
       // Update job status back to pending
       const job = await this.updateJobStatus(userId, jobId, 'pending', 'rollback');
 
