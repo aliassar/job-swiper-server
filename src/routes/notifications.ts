@@ -57,12 +57,13 @@ notifications.get('/', async (c) => {
 notifications.get('/stream', async (c) => {
   const auth = c.get('auth');
 
-  return stream(c, async (stream) => {
-    // Set SSE headers
-    c.header('Content-Type', 'text/event-stream');
-    c.header('Cache-Control', 'no-cache');
-    c.header('Connection', 'keep-alive');
+  // Set SSE headers BEFORE starting the stream
+  c.header('Content-Type', 'text/event-stream');
+  c.header('Cache-Control', 'no-cache');
+  c.header('Connection', 'keep-alive');
+  c.header('X-Accel-Buffering', 'no'); // Disable nginx buffering
 
+  return stream(c, async (stream) => {
     // Send initial connection message
     await stream.writeln('data: {"type":"connected"}\n');
 
