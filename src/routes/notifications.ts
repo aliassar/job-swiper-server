@@ -23,18 +23,25 @@ notifications.get('/', async (c) => {
   const limit = parseIntSafe(c.req.query('limit'), 20);
 
   const result = await notificationService.getNotifications(auth.userId, page, limit);
+  
+  // Get unread count for the response
+  const unreadCount = await notificationService.getUnreadCount(auth.userId);
 
   return c.json(
     formatResponse(
       true,
       {
-        items: result.items,
+        items: result.items.map(item => ({
+          ...item,
+          timestamp: item.createdAt, // Add timestamp alias for frontend compatibility
+        })),
         pagination: {
           page,
           limit,
           total: result.total,
           totalPages: Math.ceil(result.total / limit),
         },
+        unreadCount, // Add unread count to response
       },
       null,
       requestId
