@@ -34,8 +34,18 @@ interface NotificationData {
 }
 
 // EventEmitter for SSE broadcasts
-class NotificationEmitter extends EventEmitter {}
+class NotificationEmitter extends EventEmitter {
+  constructor() {
+    super();
+    // Set max listeners to unlimited since we expect many SSE connections
+    this.setMaxListeners(0);
+  }
+}
+
 const notificationEmitter = new NotificationEmitter();
+
+// Track active connections for monitoring
+let activeConnections = 0;
 
 export const notificationService = {
   /**
@@ -138,6 +148,8 @@ export const notificationService = {
     userId: string,
     callback: (notification: NotificationData) => void
   ): () => void {
+    activeConnections++;
+
     const listener = (notification: NotificationData) => {
       callback(notification);
     };
@@ -146,6 +158,7 @@ export const notificationService = {
 
     // Return unsubscribe function
     return () => {
+      activeConnections--;
       notificationEmitter.off(`notification:${userId}`, listener);
     };
   },
@@ -160,5 +173,12 @@ export const notificationService = {
       .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
 
     return unreadCount;
+  },
+
+  /**
+   * Get active connection count for monitoring
+   */
+  getActiveConnectionCount(): number {
+    return activeConnections;
   },
 };
