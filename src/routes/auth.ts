@@ -1,10 +1,15 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { sign, verify } from 'hono/jwt';
 import { AppContext } from '../types';
 import { authService } from '../services/auth.service';
 import { formatResponse } from '../lib/utils';
 import { ValidationError } from '../lib/errors';
 import { authMiddleware } from '../middleware/auth';
+import { db } from '../lib/db';
+import { users } from '../db/schema';
+import { eq } from 'drizzle-orm';
+import { logger } from '../middleware/logger';
 
 const auth = new Hono<AppContext>();
 
@@ -252,6 +257,111 @@ auth.get('/me', authMiddleware, async (c) => {
       requestId
     )
   );
+});
+
+/**
+ * Parse JWT expiration string to seconds
+ */
+function parseExpiresIn(expiresIn: string): number {
+  const match = expiresIn.match(/^(\d+)([smhd])$/);
+  if (!match) {
+    return 7 * 24 * 60 * 60; // Default 7 days
+  }
+  
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  
+  switch (unit) {
+    case 's': return value;
+    case 'm': return value * 60;
+    case 'h': return value * 60 * 60;
+    case 'd': return value * 24 * 60 * 60;
+    default: return 7 * 24 * 60 * 60;
+  }
+}
+
+/**
+ * POST /api/auth/refresh - Refresh JWT token
+ * 
+ * Requires valid (but possibly near-expiry) token in Authorization header
+ * Returns a new token with extended expiration
+ * 
+ * @returns New JWT token
+ * @throws 401 - If token is invalid or expired
+ */
+auth.post('/refresh', async (c) => {
+  const requestId = c.get('requestId');
+  
+  // Get token from Authorization header
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return c.json(formatResponse(false, null, {
+      code: 'UNAUTHORIZED',
+      message: 'No token provided',
+    }, requestId), 401);
+  }
+  
+  const token = authHeader.substring(7);
+  
+  // Ensure JWT_SECRET is configured
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    logger.error('JWT_SECRET environment variable is not configured');
+    return c.json(formatResponse(false, null, {
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Token refresh failed',
+    }, requestId), 500);
+  }
+  
+  try {
+    // Verify the existing token (this will fail if completely expired)
+    const payload = await verify(token, jwtSecret);
+    
+    if (!payload || !payload.userId) {
+      return c.json(formatResponse(false, null, {
+        code: 'UNAUTHORIZED',
+        message: 'Invalid token',
+      }, requestId), 401);
+    }
+    
+    // Check if user still exists
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, payload.userId as string))
+      .limit(1);
+    
+    if (user.length === 0) {
+      return c.json(formatResponse(false, null, {
+        code: 'UNAUTHORIZED',
+        message: 'User not found',
+      }, requestId), 401);
+    }
+    
+    // Generate new token with extended expiration
+    const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+    const expiresInSeconds = parseExpiresIn(expiresIn);
+    
+    const newToken = await sign(
+      {
+        userId: payload.userId,
+        email: user[0].email,
+        emailVerified: user[0].emailVerified,
+        exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+      },
+      jwtSecret
+    );
+    
+    logger.info({ userId: payload.userId }, 'Token refreshed');
+    
+    return c.json(formatResponse(true, { token: newToken }, null, requestId));
+  } catch (error) {
+    logger.error({ error }, 'Token refresh failed');
+    return c.json(formatResponse(false, null, {
+      code: 'UNAUTHORIZED',
+      message: 'Token refresh failed',
+    }, requestId), 401);
+  }
 });
 
 export default auth;
