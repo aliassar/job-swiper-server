@@ -30,7 +30,7 @@ function makeS3PublicUrl(bucket: string, key: string, endpoint: string) {
 export const storage = {
   async uploadFile(key: string, buffer: Buffer, contentType: string): Promise<string> {
     validateS3Config();
-    const bucket = process.env.S3_BUCKET || '';
+    const bucket = process.env.S3_BUCKET!;
     await s3Client.send(
       new PutObjectCommand({
         Bucket: bucket,
@@ -40,12 +40,12 @@ export const storage = {
       })
     );
 
-    return makeS3PublicUrl(bucket, key, process.env.S3_ENDPOINT || '');
+    return makeS3PublicUrl(bucket, key, process.env.S3_ENDPOINT!);
   },
 
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
     validateS3Config();
-    const bucket = process.env.S3_BUCKET || '';
+    const bucket = process.env.S3_BUCKET!;
     const command = new GetObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -61,7 +61,7 @@ export const storage = {
 
   async deleteFile(key: string): Promise<void> {
     validateS3Config();
-    const bucket = process.env.S3_BUCKET || '';
+    const bucket = process.env.S3_BUCKET!;
     await s3Client.send(
       new DeleteObjectCommand({
         Bucket: bucket,
