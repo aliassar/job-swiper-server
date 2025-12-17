@@ -24,7 +24,7 @@ export class MicroserviceClient {
    * Check if the client is properly configured
    */
   isConfigured(): boolean {
-    return Boolean(this.baseUrl && this.baseUrl.length > 0);
+    return Boolean(this.baseUrl && this.baseUrl.trim().length > 0);
   }
 
   async request<T = unknown>(
@@ -67,7 +67,7 @@ export class MicroserviceClient {
       if (!response.ok) {
         const errorText = await response.text();
         throw new ExternalServiceError(
-          this.baseUrl,
+          this.serviceName,
           `Request failed with status ${response.status}: ${errorText}`
         );
       }
@@ -79,7 +79,7 @@ export class MicroserviceClient {
         throw error;
       }
       throw new ExternalServiceError(
-        this.baseUrl,
+        this.serviceName,
         error instanceof Error ? error.message : 'Unknown error'
       );
     }
