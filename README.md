@@ -31,80 +31,93 @@ A production-ready backend server for the Job Swiper application built with Hono
 - ✅ **GDPR Compliance** (data export & account deletion)
 - ✅ **Automated Job Scraping** via cron (every 2 hours)
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
-
 - Node.js 18+
-- PostgreSQL database (or Neon)
-- S3-compatible storage (Cloudflare R2, AWS S3, etc.)
-- Redis (optional, for rate limiting)
+- PostgreSQL 14+
+- npm or yarn
 
 ### Installation
 
+1. Clone the repository:
 ```bash
-# Install dependencies
+git clone https://github.com/aliassar/job-swiper-server.git
+cd job-swiper-server
+```
+
+2. Install dependencies:
+```bash
 npm install
-
-# Copy environment variables
-cp .env.example .env
-
-# Edit .env with your configuration
-# See .env.example for detailed documentation of each variable
-# Required variables: DATABASE_URL, JWT_SECRET, S3_* credentials
 ```
 
-**Important Configuration Notes:**
-
-- **Authentication:** OAuth (Google/GitHub) is handled by THIS server, not the frontend. The frontend should redirect to `/api/auth/google` or `/api/auth/github` endpoints.
-- **CORS:** Add your frontend URL to `ALLOWED_ORIGINS` environment variable (e.g., `https://app.yourdomain.com`). Multiple origins can be comma-separated.
-- **Required Variables:** `DATABASE_URL`, `JWT_SECRET`, and S3 storage credentials are required for the server to start.
-- **Optional Variables:** OAuth providers, microservices, and email features are optional and can be configured as needed.
-
-See `.env.example` for complete documentation of all environment variables.
-```
-
-### Database Setup
-
+3. Set up environment variables:
 ```bash
-# Generate database migrations
-npm run db:generate
-
-# Push schema to database
-npm run db:push
-
-# Seed initial data (optional)
-npm run db:seed
-
-# Open Drizzle Studio (database viewer)
-npm run db:studio
+cp .env.example .env
 ```
+
+Edit `.env` with your configuration:
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/job_swiper
+JWT_SECRET=your-secure-secret-key
+JWT_EXPIRES_IN=7d
+PORT=5000
+```
+
+4. Run database migrations:
+```bash
+npm run db:migrate
+```
+
+5. Start the development server:
+```bash
+npm run dev
+```
+
+The server will be available at `http://localhost:5000`.
+
+### Connecting to Frontend
+
+This backend is designed to work with the [job-swiper frontend](https://github.com/aliassar/job-swiper).
+
+1. In the frontend repository, set the environment variable:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+2. The frontend will automatically use this URL for all API requests.
+
+### API Endpoints Overview
+
+| Category | Endpoints | Description |
+|----------|-----------|-------------|
+| Auth | `/api/auth/*` | Login, register, token refresh |
+| Jobs | `/api/jobs/*` | Job listing, accept, reject, skip |
+| Applications | `/api/applications/*` | Application tracking and management |
+| Notifications | `/api/notifications/*` | User notifications |
+| Settings | `/api/settings` | User preferences |
+
+See [docs/API.md](./docs/API.md) for full API documentation.
+
+### Related Repositories
+
+- **Frontend:** [aliassar/job-swiper](https://github.com/aliassar/job-swiper) - Next.js frontend
+- **Backend (this repo):** Hono.js API server with PostgreSQL
 
 ### Development
 
 ```bash
-# Start development server with hot reload
+# Run in development mode with hot reload
 npm run dev
-```
 
-### Build
-
-```bash
-# Type check
-npm run typecheck
-
-# Build for production
-npm run build
-```
-
-### Testing
-
-```bash
 # Run tests
 npm test
 
-# Run tests with UI
-npm test:ui
+# Generate new migration
+npm run db:generate
+
+# Apply migrations
+npm run db:migrate
 ```
 
 ## Project Structure
