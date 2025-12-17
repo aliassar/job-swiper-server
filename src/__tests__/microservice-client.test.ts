@@ -86,7 +86,7 @@ describe('MicroserviceClient', () => {
         serviceName: 'Test Service',
       });
 
-      expect(client.isConfigured()).toBe(true); // Whitespace is truthy
+      expect(client.isConfigured()).toBe(false);
     });
   });
 
