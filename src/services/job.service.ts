@@ -6,6 +6,7 @@ import { logger } from '../middleware/logger';
 import { timerService } from './timer.service';
 import { jobFilterClient } from '../lib/microservice-client';
 import type { JobFilterRequest, JobFilterResponse, FilterType } from '../lib/microservices';
+import type { JobWithStatus } from '../types';
 import PDFDocument from 'pdfkit';
 import { escapeLikePattern } from '../lib/utils';
 
@@ -15,6 +16,17 @@ function isDatabaseError(error: unknown): error is { code?: string; constraint?:
 }
 
 export const jobService = {
+  /**
+   * Get pending jobs for a user with optional filters
+   * @param userId - The user's UUID
+   * @param search - Optional search term for company/position
+   * @param limit - Maximum number of jobs to return (default: 10)
+   * @param location - Optional location filter
+   * @param salaryMin - Optional minimum salary filter
+   * @param salaryMax - Optional maximum salary filter
+   * @returns Promise containing jobs array and total count
+   * @throws {ValidationError} If salary range is invalid
+   */
   async getPendingJobs(
     userId: string,
     search?: string,
@@ -22,7 +34,7 @@ export const jobService = {
     location?: string,
     salaryMin?: number,
     salaryMax?: number
-  ) {
+  ): Promise<{ jobs: JobWithStatus[]; total: number }> {
     // Get blocked companies
     const blocked = await db
       .select({ companyName: blockedCompanies.companyName })
@@ -55,79 +67,88 @@ export const jobService = {
       .leftJoin(userJobStatus, and(eq(userJobStatus.jobId, jobs.id), eq(userJobStatus.userId, userId)))
       .$dynamic();
 
-    let query = baseQuery.where(sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`);
+    // Build all conditions as an array
+    const conditions: SQL<unknown>[] = [
+      sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`
+    ];
 
     // Exclude blocked companies
     if (blockedCompanyNames.length > 0) {
-      query = query.where(not(inArray(jobs.company, blockedCompanyNames)));
+      conditions.push(not(inArray(jobs.company, blockedCompanyNames)));
     }
 
     // Add search if provided
     if (search) {
       const escapedSearch = escapeLikePattern(search);
-      query = query.where(
-        or(
-          like(jobs.company, `%${escapedSearch}%`),
-          like(jobs.position, `%${escapedSearch}%`)
-        )
+      const searchCondition = or(
+        like(jobs.company, `%${escapedSearch}%`),
+        like(jobs.position, `%${escapedSearch}%`)
       );
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
     }
 
     // Add location filter
     if (location) {
       const escapedLocation = escapeLikePattern(location);
-      query = query.where(like(jobs.location, `%${escapedLocation}%`));
+      conditions.push(like(jobs.location, `%${escapedLocation}%`));
     }
 
     // Add salary filter using numeric fields for better performance
     // Filter jobs where salary range overlaps with user's desired range
     if (salaryMin !== undefined) {
       // Job's maximum salary should be at least the user's minimum requirement
-      query = query.where(sql`${jobs.salaryMax} >= ${salaryMin}`);
+      conditions.push(sql`${jobs.salaryMax} >= ${salaryMin}`);
     }
     if (salaryMax !== undefined) {
       // Job's minimum salary should be within the user's maximum budget
-      query = query.where(sql`${jobs.salaryMin} <= ${salaryMax}`);
+      conditions.push(sql`${jobs.salaryMin} <= ${salaryMax}`);
     }
+
+    // Apply all conditions at once
+    const query = baseQuery.where(and(...conditions));
 
     const results = await query.orderBy(desc(jobs.createdAt)).limit(limit);
 
     // Get total count of remaining jobs with the same filters
-    let countQuery = db
-      .select({ count: sql<number>`count(*)` })
-      .from(jobs)
-      .leftJoin(userJobStatus, and(eq(userJobStatus.jobId, jobs.id), eq(userJobStatus.userId, userId)))
-      .where(sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`)
-      .$dynamic();
+    // Build count conditions (same as the main query)
+    const countConditions: SQL<unknown>[] = [
+      sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`
+    ];
 
-    // Apply the same filters to count query
     if (blockedCompanyNames.length > 0) {
-      countQuery = countQuery.where(not(inArray(jobs.company, blockedCompanyNames)));
+      countConditions.push(not(inArray(jobs.company, blockedCompanyNames)));
     }
 
     if (search) {
       const escapedSearch = escapeLikePattern(search);
-      countQuery = countQuery.where(
-        or(
-          like(jobs.company, `%${escapedSearch}%`),
-          like(jobs.position, `%${escapedSearch}%`)
-        )
+      const searchCondition = or(
+        like(jobs.company, `%${escapedSearch}%`),
+        like(jobs.position, `%${escapedSearch}%`)
       );
+      if (searchCondition) {
+        countConditions.push(searchCondition);
+      }
     }
 
     if (location) {
       const escapedLocation = escapeLikePattern(location);
-      countQuery = countQuery.where(like(jobs.location, `%${escapedLocation}%`));
+      countConditions.push(like(jobs.location, `%${escapedLocation}%`));
     }
 
     if (salaryMin !== undefined) {
-      countQuery = countQuery.where(sql`${jobs.salaryMax} >= ${salaryMin}`);
+      countConditions.push(sql`${jobs.salaryMax} >= ${salaryMin}`);
     }
     if (salaryMax !== undefined) {
-      countQuery = countQuery.where(sql`${jobs.salaryMin} <= ${salaryMax}`);
+      countConditions.push(sql`${jobs.salaryMin} <= ${salaryMax}`);
     }
 
-    const totalResult = await countQuery;
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(jobs)
+      .leftJoin(userJobStatus, and(eq(userJobStatus.jobId, jobs.id), eq(userJobStatus.userId, userId)))
+      .where(and(...countConditions));
     const total = Number(totalResult[0]?.count || 0);
 
     return {
@@ -182,13 +203,15 @@ export const jobService = {
       and(eq(userJobStatus.userId, userId), eq(userJobStatus.jobId, jobId))
     ).limit(1);
 
+    const now = new Date();
+    
     if (existing.length > 0) {
       await dbContext
         .update(userJobStatus)
         .set({
           status,
-          decidedAt: new Date(),
-          updatedAt: new Date(),
+          decidedAt: now,
+          updatedAt: now,
         })
         .where(and(eq(userJobStatus.userId, userId), eq(userJobStatus.jobId, jobId)));
     } else {
@@ -196,7 +219,7 @@ export const jobService = {
         userId,
         jobId,
         status,
-        decidedAt: new Date(),
+        decidedAt: now,
       });
     }
 
@@ -210,7 +233,13 @@ export const jobService = {
       metadata: {},
     });
 
-    return await this.getJobWithStatus(userId, jobId);
+    // Return updated job data without refetching
+    // Construct the updated job object from what we know
+    return {
+      ...job,
+      status,
+      decidedAt: now,
+    };
   },
 
   async toggleSave(userId: string, jobId: string) {
@@ -407,6 +436,15 @@ export const jobService = {
     };
   },
 
+  /**
+   * Accept a job and create an application
+   * @param userId - The user's UUID
+   * @param jobId - The job's UUID
+   * @param _requestId - Optional request ID for tracing
+   * @param metadata - Optional metadata including automaticApply flag
+   * @returns Promise containing job, application, and workflow run (if auto-apply enabled)
+   * @throws {NotFoundError} If job doesn't exist
+   */
   async acceptJob(userId: string, jobId: string, _requestId?: string, metadata?: { automaticApply?: boolean }) {
     // Use a transaction for atomicity
     return await db.transaction(async (tx) => {
@@ -494,10 +532,34 @@ export const jobService = {
         
         workflowRun = workflow;
 
-        // Schedule 1-minute delay timer (NOT immediate execution)
-        await timerService.scheduleAutoApplyDelay(userId, application.id);
-        
-        logger.info({ userId, jobId, applicationId: application.id, workflowRunId: workflow.id }, 'Auto-apply workflow scheduled with 1-minute delay');
+        // Schedule 1-minute delay timer with validation
+        const failureTimestamp = new Date();
+        try {
+          const timerId = await timerService.scheduleAutoApplyDelay(userId, application.id);
+          if (!timerId || timerId === '') {
+            logger.error({ userId, applicationId: application.id }, 'Failed to create auto-apply delay timer');
+            // Update workflow status to indicate scheduling failure
+            await tx
+              .update(workflowRuns)
+              .set({
+                status: 'failed',
+                currentStep: 'timer_scheduling_failed',
+                updatedAt: failureTimestamp,
+              })
+              .where(eq(workflowRuns.id, workflowRun.id));
+          } else {
+            logger.info({ 
+              userId, 
+              jobId, 
+              applicationId: application.id, 
+              workflowRunId: workflow.id,
+              timerId 
+            }, 'Auto-apply workflow scheduled with 1-minute delay');
+          }
+        } catch (timerError) {
+          logger.error({ error: timerError, userId, applicationId: application.id }, 'Exception while scheduling auto-apply timer');
+          // Don't fail the job acceptance, but log the issue
+        }
       }
 
       return {
@@ -578,8 +640,9 @@ export const jobService = {
   /**
    * Block a company
    */
-  async blockCompany(userId: string, companyName: string, reason?: string) {
-    const [blocked] = await db
+  async blockCompany(userId: string, companyName: string, reason?: string, tx?: any) { // Transaction context when called within a transaction
+    const dbContext = tx || db;
+    const [blocked] = await dbContext
       .insert(blockedCompanies)
       .values({
         userId,
@@ -642,7 +705,7 @@ export const jobService = {
 
       // If reason is 'dont_recommend_company', auto-block the company
       if (reason === 'dont_recommend_company') {
-        await this.blockCompany(userId, job.company, 'Reported via dont_recommend_company');
+        await this.blockCompany(userId, job.company, 'Reported via dont_recommend_company', tx);
       }
 
       // Notify filtering microservice based on reason
