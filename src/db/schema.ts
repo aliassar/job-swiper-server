@@ -229,7 +229,9 @@ export const userJobStatus = pgTable('user_job_status', {
   decidedAt: timestamp('decided_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  uniqueUserJob: uniqueIndex('user_job_status_user_id_job_id_unique').on(table.userId, table.jobId),
+}));
 
 // Reported jobs table
 export const reportedJobs = pgTable('reported_jobs', {
