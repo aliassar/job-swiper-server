@@ -55,79 +55,86 @@ export const jobService = {
       .leftJoin(userJobStatus, and(eq(userJobStatus.jobId, jobs.id), eq(userJobStatus.userId, userId)))
       .$dynamic();
 
-    let query = baseQuery.where(sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`);
+    // Build all conditions as an array
+    const conditions: SQL<unknown>[] = [
+      sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`
+    ];
 
     // Exclude blocked companies
     if (blockedCompanyNames.length > 0) {
-      query = query.where(not(inArray(jobs.company, blockedCompanyNames)));
+      conditions.push(not(inArray(jobs.company, blockedCompanyNames)));
     }
 
     // Add search if provided
     if (search) {
       const escapedSearch = escapeLikePattern(search);
-      query = query.where(
+      conditions.push(
         or(
           like(jobs.company, `%${escapedSearch}%`),
           like(jobs.position, `%${escapedSearch}%`)
-        )
+        )!
       );
     }
 
     // Add location filter
     if (location) {
       const escapedLocation = escapeLikePattern(location);
-      query = query.where(like(jobs.location, `%${escapedLocation}%`));
+      conditions.push(like(jobs.location, `%${escapedLocation}%`));
     }
 
     // Add salary filter using numeric fields for better performance
     // Filter jobs where salary range overlaps with user's desired range
     if (salaryMin !== undefined) {
       // Job's maximum salary should be at least the user's minimum requirement
-      query = query.where(sql`${jobs.salaryMax} >= ${salaryMin}`);
+      conditions.push(sql`${jobs.salaryMax} >= ${salaryMin}`);
     }
     if (salaryMax !== undefined) {
       // Job's minimum salary should be within the user's maximum budget
-      query = query.where(sql`${jobs.salaryMin} <= ${salaryMax}`);
+      conditions.push(sql`${jobs.salaryMin} <= ${salaryMax}`);
     }
+
+    // Apply all conditions at once
+    const query = baseQuery.where(and(...conditions));
 
     const results = await query.orderBy(desc(jobs.createdAt)).limit(limit);
 
     // Get total count of remaining jobs with the same filters
-    let countQuery = db
-      .select({ count: sql<number>`count(*)` })
-      .from(jobs)
-      .leftJoin(userJobStatus, and(eq(userJobStatus.jobId, jobs.id), eq(userJobStatus.userId, userId)))
-      .where(sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`)
-      .$dynamic();
+    // Build count conditions (same as the main query)
+    const countConditions: SQL<unknown>[] = [
+      sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`
+    ];
 
-    // Apply the same filters to count query
     if (blockedCompanyNames.length > 0) {
-      countQuery = countQuery.where(not(inArray(jobs.company, blockedCompanyNames)));
+      countConditions.push(not(inArray(jobs.company, blockedCompanyNames)));
     }
 
     if (search) {
       const escapedSearch = escapeLikePattern(search);
-      countQuery = countQuery.where(
+      countConditions.push(
         or(
           like(jobs.company, `%${escapedSearch}%`),
           like(jobs.position, `%${escapedSearch}%`)
-        )
+        )!
       );
     }
 
     if (location) {
       const escapedLocation = escapeLikePattern(location);
-      countQuery = countQuery.where(like(jobs.location, `%${escapedLocation}%`));
+      countConditions.push(like(jobs.location, `%${escapedLocation}%`));
     }
 
     if (salaryMin !== undefined) {
-      countQuery = countQuery.where(sql`${jobs.salaryMax} >= ${salaryMin}`);
+      countConditions.push(sql`${jobs.salaryMax} >= ${salaryMin}`);
     }
     if (salaryMax !== undefined) {
-      countQuery = countQuery.where(sql`${jobs.salaryMin} <= ${salaryMax}`);
+      countConditions.push(sql`${jobs.salaryMin} <= ${salaryMax}`);
     }
 
-    const totalResult = await countQuery;
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(jobs)
+      .leftJoin(userJobStatus, and(eq(userJobStatus.jobId, jobs.id), eq(userJobStatus.userId, userId)))
+      .where(and(...countConditions));
     const total = Number(totalResult[0]?.count || 0);
 
     return {
