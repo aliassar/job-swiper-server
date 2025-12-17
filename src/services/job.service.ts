@@ -68,12 +68,13 @@ export const jobService = {
     // Add search if provided
     if (search) {
       const escapedSearch = escapeLikePattern(search);
-      conditions.push(
-        or(
-          like(jobs.company, `%${escapedSearch}%`),
-          like(jobs.position, `%${escapedSearch}%`)
-        )!
+      const searchCondition = or(
+        like(jobs.company, `%${escapedSearch}%`),
+        like(jobs.position, `%${escapedSearch}%`)
       );
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
     }
 
     // Add location filter
@@ -110,12 +111,13 @@ export const jobService = {
 
     if (search) {
       const escapedSearch = escapeLikePattern(search);
-      countConditions.push(
-        or(
-          like(jobs.company, `%${escapedSearch}%`),
-          like(jobs.position, `%${escapedSearch}%`)
-        )!
+      const searchCondition = or(
+        like(jobs.company, `%${escapedSearch}%`),
+        like(jobs.position, `%${escapedSearch}%`)
       );
+      if (searchCondition) {
+        countConditions.push(searchCondition);
+      }
     }
 
     if (location) {
