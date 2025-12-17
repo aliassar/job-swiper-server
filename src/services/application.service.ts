@@ -315,7 +315,10 @@ export const applicationService = {
     // Cancel any pending message verification timers
     await timerService.cancelTimersByTarget(applicationId, 'message_verification');
 
-    logger.info({ userId, applicationId }, 'Message verified by user');
+    // Move to next stage - Being Applied
+    await this.updateApplicationStage(userId, applicationId, 'Being Applied');
+
+    logger.info({ userId, applicationId }, 'Message verified by user, moving to Being Applied stage');
 
     return await this.getApplicationById(userId, applicationId);
   },
@@ -342,7 +345,10 @@ export const applicationService = {
       })
       .where(eq(applications.id, applicationId));
 
-    logger.info({ userId, applicationId }, 'Message updated and verified by user');
+    // Move to next stage - Being Applied
+    await this.updateApplicationStage(userId, applicationId, 'Being Applied');
+
+    logger.info({ userId, applicationId }, 'Message updated and verified by user, moving to Being Applied stage');
 
     return await this.getApplicationById(userId, applicationId);
   },
