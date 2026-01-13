@@ -214,6 +214,9 @@ export const jobs = pgTable('jobs', {
   experienceLevel: text('experience_level'),
   jobUrl: text('job_url'),
   postedDate: timestamp('posted_date'),
+  logoUrl: text('logo_url'),
+  srcName: text('src_name'), // 'indeed' | 'linkedin' | 'glassdoor'
+  applyLink: text('apply_link'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
