@@ -12,14 +12,10 @@ const app = new Hono<AppContext>();
 
 // CORS middleware - must be first
 app.use('*', cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:3002',
-  ],
+  origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key', 'X-Idempotency-Key'],
-  credentials: true,
+  credentials: false, // credentials must be false when origin is '*'
 }));
 
 // Global middleware
@@ -54,10 +50,11 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   const { serve } = await import('@hono/node-server');
   const port = parseInt(process.env.PORT || '5000', 10);
 
-  console.log(`🚀 Server starting on http://localhost:${port}`);
+  console.log(`🚀 Server starting on http://0.0.0.0:${port}`);
   serve({
     fetch: app.fetch,
     port,
+    hostname: '0.0.0.0',
   });
 }
 
