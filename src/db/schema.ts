@@ -206,8 +206,10 @@ export const jobs = pgTable('jobs', {
   salary: text('salary'),
   salaryMin: integer('salary_min'),
   salaryMax: integer('salary_max'),
-  skills: jsonb('skills').notNull().default([]),
+  requiredSkills: jsonb('required_skills').notNull().default([]),
+  optionalSkills: jsonb('optional_skills').notNull().default([]),
   description: text('description'),
+  shortDescription: text('short_description'),
   requirements: text('requirements'),
   benefits: text('benefits'),
   jobType: text('job_type'),
@@ -217,6 +219,8 @@ export const jobs = pgTable('jobs', {
   logoUrl: text('logo_url'),
   srcName: text('src_name'), // 'indeed' | 'linkedin' | 'glassdoor'
   applyLink: text('apply_link'),
+  germanRequirement: text('german_requirement'), // any string value
+  yearsOfExperience: text('years_of_experience'), // any string value
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
