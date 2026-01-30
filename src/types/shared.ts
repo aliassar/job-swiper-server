@@ -14,6 +14,9 @@ export const APPLICATION_STAGES = [
   'Accepted',
   'Rejected',
   'Withdrawn',
+  'CV Check',
+  'Message Check',
+  'Failed',
 ] as const;
 
 export type ApplicationStage = typeof APPLICATION_STAGES[number];
