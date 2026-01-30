@@ -9,6 +9,9 @@ export const applicationStageEnum = pgEnum('application_stage_enum', [
   'Accepted',
   'Rejected',
   'Withdrawn',
+  'CV Check',
+  'Message Check',
+  'Failed',
 ]);
 export const reportReasonEnum = pgEnum('report_reason_enum', ['fake', 'not_interested', 'dont_recommend_company']);
 export const actionTypeEnum = pgEnum('action_type_enum', [
@@ -55,6 +58,8 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// ... existing code ...
+
 // User profiles table for auto-apply information
 export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -68,6 +73,8 @@ export const userProfiles = pgTable('user_profiles', {
   state: text('state'),
   zipCode: text('zip_code'),
   country: text('country'),
+  summary: text('summary'),
+  headline: text('headline'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

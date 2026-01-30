@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { AppContext } from '../types';
 import { emailConnectionService } from '../services/email-connection.service';
 import { formatResponse } from '../lib/utils';
-import { ValidationError, NotFoundError } from '../lib/errors';
+import { ValidationError } from '../lib/errors';
 import { validateUuidParam } from '../middleware/validate-params';
 import { logger } from '../middleware/logger';
 
@@ -214,18 +214,18 @@ emailConnections.post('/:id/sync', validateUuidParam('id'), async (c) => {
   try {
     // Get the email connection
     const connection = await emailConnectionService.getConnection(auth.userId, connectionId);
-    
+
     // Sync to stage updater microservice if configured
     if (process.env.STAGE_UPDATER_SERVICE_URL) {
-      const syncResult = await emailConnectionService.syncToStageUpdater(connection);
-      
-      logger.info({ 
-        userId: auth.userId, 
-        connectionId, 
-        provider: connection.provider 
+      const _syncResult = await emailConnectionService.syncToStageUpdater(connection);
+
+      logger.info({
+        userId: auth.userId,
+        connectionId,
+        provider: connection.provider
       }, 'Email connection synced to stage updater');
-      
-      return c.json(formatResponse(true, { 
+
+      return c.json(formatResponse(true, {
         message: 'Email connection synced successfully',
         synced: true,
         syncedAt: new Date().toISOString(),
@@ -233,8 +233,8 @@ emailConnections.post('/:id/sync', validateUuidParam('id'), async (c) => {
     } else {
       // Stage updater not configured - return success but indicate not synced
       logger.warn({ connectionId }, 'Stage updater service not configured');
-      
-      return c.json(formatResponse(true, { 
+
+      return c.json(formatResponse(true, {
         message: 'Sync skipped - stage updater service not configured',
         synced: false,
       }, null, requestId));

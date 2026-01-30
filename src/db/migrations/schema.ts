@@ -1,5 +1,5 @@
 import { pgTable, uuid, text, jsonb, timestamp, unique, boolean, integer, foreignKey, uniqueIndex, pgEnum } from "drizzle-orm/pg-core"
-  import { sql } from "drizzle-orm"
+
 
 export const actionTypeEnum = pgEnum("action_type_enum", ['accepted', 'rejected', 'skipped', 'saved', 'unsaved', 'rollback', 'report', 'unreport', 'stage_updated'])
 export const applicationStageEnum = pgEnum("application_stage_enum", ['Syncing', 'Being Applied', 'Applied', 'Phone Screen', 'Interview', 'Offer', 'Rejected', 'Accepted', 'Withdrawn', 'CV Check', 'Message Check', 'Interview 1', 'Next Interviews', 'Failed'])
@@ -32,11 +32,11 @@ export const jobSources = pgTable("job_sources", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		jobSourcesNameUnique: unique("job_sources_name_unique").on(table.name),
-	}
-});
+	(table) => {
+		return {
+			jobSourcesNameUnique: unique("job_sources_name_unique").on(table.name),
+		}
+	});
 
 export const syncRuns = pgTable("sync_runs", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -59,11 +59,11 @@ export const users = pgTable("users", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		usersEmailUnique: unique("users_email_unique").on(table.email),
-	}
-});
+	(table) => {
+		return {
+			usersEmailUnique: unique("users_email_unique").on(table.email),
+		}
+	});
 
 export const blockedCompanies = pgTable("blocked_companies", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -72,15 +72,15 @@ export const blockedCompanies = pgTable("blocked_companies", {
 	reason: text("reason"),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		blockedCompaniesUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "blocked_companies_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			blockedCompaniesUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "blocked_companies_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const emailVerificationTokens = pgTable("email_verification_tokens", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -90,16 +90,16 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
 	used: boolean("used").default(false).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		emailVerificationTokensUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "email_verification_tokens_user_id_users_id_fk"
-		}).onDelete("cascade"),
-		emailVerificationTokensTokenUnique: unique("email_verification_tokens_token_unique").on(table.token),
-	}
-});
+	(table) => {
+		return {
+			emailVerificationTokensUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "email_verification_tokens_user_id_users_id_fk"
+			}).onDelete("cascade"),
+			emailVerificationTokensTokenUnique: unique("email_verification_tokens_token_unique").on(table.token),
+		}
+	});
 
 export const followUpTracking = pgTable("follow_up_tracking", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -111,20 +111,20 @@ export const followUpTracking = pgTable("follow_up_tracking", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		followUpTrackingUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "follow_up_tracking_user_id_users_id_fk"
-		}).onDelete("cascade"),
-		followUpTrackingApplicationIdApplicationsIdFk: foreignKey({
-			columns: [table.applicationId],
-			foreignColumns: [applications.id],
-			name: "follow_up_tracking_application_id_applications_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			followUpTrackingUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "follow_up_tracking_user_id_users_id_fk"
+			}).onDelete("cascade"),
+			followUpTrackingApplicationIdApplicationsIdFk: foreignKey({
+				columns: [table.applicationId],
+				foreignColumns: [applications.id],
+				name: "follow_up_tracking_application_id_applications_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const notifications = pgTable("notifications", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -136,15 +136,15 @@ export const notifications = pgTable("notifications", {
 	metadata: jsonb("metadata").default({}).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		notificationsUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "notifications_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			notificationsUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "notifications_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const scheduledTimers = pgTable("scheduled_timers", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -157,15 +157,15 @@ export const scheduledTimers = pgTable("scheduled_timers", {
 	metadata: jsonb("metadata").default({}).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		scheduledTimersUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "scheduled_timers_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			scheduledTimersUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "scheduled_timers_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const userProfiles = pgTable("user_profiles", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -182,15 +182,15 @@ export const userProfiles = pgTable("user_profiles", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		userProfilesUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_profiles_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			userProfilesUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "user_profiles_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const workflowRuns = pgTable("workflow_runs", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -203,21 +203,21 @@ export const workflowRuns = pgTable("workflow_runs", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		workflowRunsUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "workflow_runs_user_id_users_id_fk"
-		}).onDelete("cascade"),
-		workflowRunsApplicationIdApplicationsIdFk: foreignKey({
-			columns: [table.applicationId],
-			foreignColumns: [applications.id],
-			name: "workflow_runs_application_id_applications_id_fk"
-		}).onDelete("cascade"),
-		workflowRunsIdempotencyKeyUnique: unique("workflow_runs_idempotency_key_unique").on(table.idempotencyKey),
-	}
-});
+	(table) => {
+		return {
+			workflowRunsUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "workflow_runs_user_id_users_id_fk"
+			}).onDelete("cascade"),
+			workflowRunsApplicationIdApplicationsIdFk: foreignKey({
+				columns: [table.applicationId],
+				foreignColumns: [applications.id],
+				name: "workflow_runs_application_id_applications_id_fk"
+			}).onDelete("cascade"),
+			workflowRunsIdempotencyKeyUnique: unique("workflow_runs_idempotency_key_unique").on(table.idempotencyKey),
+		}
+	});
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -227,16 +227,16 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 	used: boolean("used").default(false).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		passwordResetTokensUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "password_reset_tokens_user_id_users_id_fk"
-		}).onDelete("cascade"),
-		passwordResetTokensTokenUnique: unique("password_reset_tokens_token_unique").on(table.token),
-	}
-});
+	(table) => {
+		return {
+			passwordResetTokensUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "password_reset_tokens_user_id_users_id_fk"
+			}).onDelete("cascade"),
+			passwordResetTokensTokenUnique: unique("password_reset_tokens_token_unique").on(table.token),
+		}
+	});
 
 export const emailConnections = pgTable("email_connections", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -258,15 +258,15 @@ export const emailConnections = pgTable("email_connections", {
 	encryptedImapPassword: text("encrypted_imap_password"),
 	encryptionIv: text("encryption_iv"),
 },
-(table) => {
-	return {
-		emailConnectionsUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "email_connections_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			emailConnectionsUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "email_connections_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const jobs = pgTable("jobs", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -289,15 +289,15 @@ export const jobs = pgTable("jobs", {
 	salaryMin: integer("salary_min"),
 	salaryMax: integer("salary_max"),
 },
-(table) => {
-	return {
-		jobsSourceIdJobSourcesIdFk: foreignKey({
-			columns: [table.sourceId],
-			foreignColumns: [jobSources.id],
-			name: "jobs_source_id_job_sources_id_fk"
-		}),
-	}
-});
+	(table) => {
+		return {
+			jobsSourceIdJobSourcesIdFk: foreignKey({
+				columns: [table.sourceId],
+				foreignColumns: [jobSources.id],
+				name: "jobs_source_id_job_sources_id_fk"
+			}),
+		}
+	});
 
 export const actionHistory = pgTable("action_history", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -309,20 +309,20 @@ export const actionHistory = pgTable("action_history", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	userId: uuid("user_id").notNull(),
 },
-(table) => {
-	return {
-		actionHistoryJobIdJobsIdFk: foreignKey({
-			columns: [table.jobId],
-			foreignColumns: [jobs.id],
-			name: "action_history_job_id_jobs_id_fk"
-		}).onDelete("cascade"),
-		actionHistoryUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "action_history_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			actionHistoryJobIdJobsIdFk: foreignKey({
+				columns: [table.jobId],
+				foreignColumns: [jobs.id],
+				name: "action_history_job_id_jobs_id_fk"
+			}).onDelete("cascade"),
+			actionHistoryUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "action_history_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const applications = pgTable("applications", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -342,26 +342,26 @@ export const applications = pgTable("applications", {
 	customCoverLetterUrl: text("custom_cover_letter_url"),
 	userId: uuid("user_id").notNull(),
 },
-(table) => {
-	return {
-		userIdJobIdUnique: uniqueIndex("applications_user_id_job_id_unique").using("btree", table.userId.asc().nullsLast(), table.jobId.asc().nullsLast()),
-		applicationsJobIdJobsIdFk: foreignKey({
-			columns: [table.jobId],
-			foreignColumns: [jobs.id],
-			name: "applications_job_id_jobs_id_fk"
-		}).onDelete("cascade"),
-		applicationsResumeFileIdResumeFilesIdFk: foreignKey({
-			columns: [table.resumeFileId],
-			foreignColumns: [resumeFiles.id],
-			name: "applications_resume_file_id_resume_files_id_fk"
-		}),
-		applicationsUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "applications_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			userIdJobIdUnique: uniqueIndex("applications_user_id_job_id_unique").using("btree", table.userId.asc().nullsLast(), table.jobId.asc().nullsLast()),
+			applicationsJobIdJobsIdFk: foreignKey({
+				columns: [table.jobId],
+				foreignColumns: [jobs.id],
+				name: "applications_job_id_jobs_id_fk"
+			}).onDelete("cascade"),
+			applicationsResumeFileIdResumeFilesIdFk: foreignKey({
+				columns: [table.resumeFileId],
+				foreignColumns: [resumeFiles.id],
+				name: "applications_resume_file_id_resume_files_id_fk"
+			}),
+			applicationsUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "applications_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const generatedCoverLetters = pgTable("generated_cover_letters", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -373,25 +373,25 @@ export const generatedCoverLetters = pgTable("generated_cover_letters", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	userId: uuid("user_id").notNull(),
 },
-(table) => {
-	return {
-		generatedCoverLettersJobIdJobsIdFk: foreignKey({
-			columns: [table.jobId],
-			foreignColumns: [jobs.id],
-			name: "generated_cover_letters_job_id_jobs_id_fk"
-		}).onDelete("cascade"),
-		generatedCoverLettersApplicationIdApplicationsIdFk: foreignKey({
-			columns: [table.applicationId],
-			foreignColumns: [applications.id],
-			name: "generated_cover_letters_application_id_applications_id_fk"
-		}).onDelete("cascade"),
-		generatedCoverLettersUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "generated_cover_letters_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			generatedCoverLettersJobIdJobsIdFk: foreignKey({
+				columns: [table.jobId],
+				foreignColumns: [jobs.id],
+				name: "generated_cover_letters_job_id_jobs_id_fk"
+			}).onDelete("cascade"),
+			generatedCoverLettersApplicationIdApplicationsIdFk: foreignKey({
+				columns: [table.applicationId],
+				foreignColumns: [applications.id],
+				name: "generated_cover_letters_application_id_applications_id_fk"
+			}).onDelete("cascade"),
+			generatedCoverLettersUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "generated_cover_letters_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const generatedResumes = pgTable("generated_resumes", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -404,30 +404,30 @@ export const generatedResumes = pgTable("generated_resumes", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	userId: uuid("user_id").notNull(),
 },
-(table) => {
-	return {
-		generatedResumesJobIdJobsIdFk: foreignKey({
-			columns: [table.jobId],
-			foreignColumns: [jobs.id],
-			name: "generated_resumes_job_id_jobs_id_fk"
-		}).onDelete("cascade"),
-		generatedResumesApplicationIdApplicationsIdFk: foreignKey({
-			columns: [table.applicationId],
-			foreignColumns: [applications.id],
-			name: "generated_resumes_application_id_applications_id_fk"
-		}).onDelete("cascade"),
-		generatedResumesBaseResumeIdResumeFilesIdFk: foreignKey({
-			columns: [table.baseResumeId],
-			foreignColumns: [resumeFiles.id],
-			name: "generated_resumes_base_resume_id_resume_files_id_fk"
-		}),
-		generatedResumesUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "generated_resumes_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			generatedResumesJobIdJobsIdFk: foreignKey({
+				columns: [table.jobId],
+				foreignColumns: [jobs.id],
+				name: "generated_resumes_job_id_jobs_id_fk"
+			}).onDelete("cascade"),
+			generatedResumesApplicationIdApplicationsIdFk: foreignKey({
+				columns: [table.applicationId],
+				foreignColumns: [applications.id],
+				name: "generated_resumes_application_id_applications_id_fk"
+			}).onDelete("cascade"),
+			generatedResumesBaseResumeIdResumeFilesIdFk: foreignKey({
+				columns: [table.baseResumeId],
+				foreignColumns: [resumeFiles.id],
+				name: "generated_resumes_base_resume_id_resume_files_id_fk"
+			}),
+			generatedResumesUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "generated_resumes_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const reportedJobs = pgTable("reported_jobs", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -438,20 +438,20 @@ export const reportedJobs = pgTable("reported_jobs", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	userId: uuid("user_id").notNull(),
 },
-(table) => {
-	return {
-		reportedJobsJobIdJobsIdFk: foreignKey({
-			columns: [table.jobId],
-			foreignColumns: [jobs.id],
-			name: "reported_jobs_job_id_jobs_id_fk"
-		}).onDelete("cascade"),
-		reportedJobsUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "reported_jobs_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			reportedJobsJobIdJobsIdFk: foreignKey({
+				columns: [table.jobId],
+				foreignColumns: [jobs.id],
+				name: "reported_jobs_job_id_jobs_id_fk"
+			}).onDelete("cascade"),
+			reportedJobsUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "reported_jobs_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const resumeFiles = pgTable("resume_files", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -462,15 +462,15 @@ export const resumeFiles = pgTable("resume_files", {
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 	userId: uuid("user_id").notNull(),
 },
-(table) => {
-	return {
-		resumeFilesUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "resume_files_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			resumeFilesUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "resume_files_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const userJobStatus = pgTable("user_job_status", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -483,20 +483,20 @@ export const userJobStatus = pgTable("user_job_status", {
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 	userId: uuid("user_id").notNull(),
 },
-(table) => {
-	return {
-		userJobStatusJobIdJobsIdFk: foreignKey({
-			columns: [table.jobId],
-			foreignColumns: [jobs.id],
-			name: "user_job_status_job_id_jobs_id_fk"
-		}).onDelete("cascade"),
-		userJobStatusUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_job_status_user_id_users_id_fk"
-		}).onDelete("cascade"),
-	}
-});
+	(table) => {
+		return {
+			userJobStatusJobIdJobsIdFk: foreignKey({
+				columns: [table.jobId],
+				foreignColumns: [jobs.id],
+				name: "user_job_status_job_id_jobs_id_fk"
+			}).onDelete("cascade"),
+			userJobStatusUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "user_job_status_user_id_users_id_fk"
+			}).onDelete("cascade"),
+		}
+	});
 
 export const userSettings = pgTable("user_settings", {
 	id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -524,18 +524,18 @@ export const userSettings = pgTable("user_settings", {
 	autoGenerateEmail: boolean("auto_generate_email").default(false).notNull(),
 	aiFilteringEnabled: boolean("ai_filtering_enabled").default(false).notNull(),
 },
-(table) => {
-	return {
-		userSettingsBaseResumeIdResumeFilesIdFk: foreignKey({
-			columns: [table.baseResumeId],
-			foreignColumns: [resumeFiles.id],
-			name: "user_settings_base_resume_id_resume_files_id_fk"
-		}),
-		userSettingsUserIdUsersIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_settings_user_id_users_id_fk"
-		}).onDelete("cascade"),
-		userSettingsUserIdUnique: unique("user_settings_user_id_unique").on(table.userId),
-	}
-});
+	(table) => {
+		return {
+			userSettingsBaseResumeIdResumeFilesIdFk: foreignKey({
+				columns: [table.baseResumeId],
+				foreignColumns: [resumeFiles.id],
+				name: "user_settings_base_resume_id_resume_files_id_fk"
+			}),
+			userSettingsUserIdUsersIdFk: foreignKey({
+				columns: [table.userId],
+				foreignColumns: [users.id],
+				name: "user_settings_user_id_users_id_fk"
+			}).onDelete("cascade"),
+			userSettingsUserIdUnique: unique("user_settings_user_id_unique").on(table.userId),
+		}
+	});

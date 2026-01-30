@@ -10,7 +10,7 @@ async function clearApplications() {
         process.exit(1);
     }
 
-    const result = await db.delete(applications);
+    await db.delete(applications);
     console.log('Success! Deleted all applications.');
     process.exit(0);
 }
