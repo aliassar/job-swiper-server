@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { and, or, like, not, inArray, sql, SQL } from 'drizzle-orm';
 
 /**
@@ -12,33 +12,33 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
     it('should build all conditions in an array before applying them', () => {
       // Simulate the fixed approach - conditions built as array
       const conditions: SQL<unknown>[] = [];
-      
+
       // Base condition
       conditions.push(sql`status IS NULL OR status = 'pending'`);
-      
+
       // Blocked companies condition
       const blockedCompanies = ['BlockedCorp', 'SpamCo'];
       if (blockedCompanies.length > 0) {
         conditions.push(not(inArray(sql`company`, blockedCompanies)));
       }
-      
+
       // Search condition
       const search = 'Engineer';
       if (search) {
         conditions.push(
           or(
-            like(sql`company`, `%${search}%`),
-            like(sql`position`, `%${search}%`)
+            like(sql`company` as any, `%${search}%`),
+            like(sql`position` as any, `%${search}%`)
           )!
         );
       }
-      
+
       // Location condition
       const location = 'New York';
       if (location) {
-        conditions.push(like(sql`location`, `%${location}%`));
+        conditions.push(like(sql`location` as any, `%${location}%`));
       }
-      
+
       // Salary conditions
       const salaryMin = 100000;
       const salaryMax = 150000;
@@ -48,10 +48,10 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
       if (salaryMax !== undefined) {
         conditions.push(sql`salary_min <= ${salaryMax}`);
       }
-      
+
       // Verify all conditions are present
       expect(conditions).toHaveLength(6);
-      
+
       // All conditions can be combined with AND
       const combinedCondition = and(...conditions);
       expect(combinedCondition).toBeDefined();
@@ -59,16 +59,16 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
 
     it('should handle case with no optional filters', () => {
       const conditions: SQL<unknown>[] = [];
-      
+
       // Only base condition
       conditions.push(sql`status IS NULL OR status = 'pending'`);
-      
+
       // No blocked companies
       const blockedCompanies: string[] = [];
       if (blockedCompanies.length > 0) {
         conditions.push(not(inArray(sql`company`, blockedCompanies)));
       }
-      
+
       // No search
       const search = undefined;
       if (search) {
@@ -79,19 +79,19 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
           )!
         );
       }
-      
+
       // Verify only base condition exists
       expect(conditions).toHaveLength(1);
-      
+
       const combinedCondition = and(...conditions);
       expect(combinedCondition).toBeDefined();
     });
 
     it('should handle case with only search filter', () => {
       const conditions: SQL<unknown>[] = [];
-      
+
       conditions.push(sql`status IS NULL OR status = 'pending'`);
-      
+
       const search = 'Software Developer';
       if (search) {
         conditions.push(
@@ -101,67 +101,67 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
           )!
         );
       }
-      
+
       expect(conditions).toHaveLength(2);
-      
+
       const combinedCondition = and(...conditions);
       expect(combinedCondition).toBeDefined();
     });
 
     it('should handle case with only location filter', () => {
       const conditions: SQL<unknown>[] = [];
-      
+
       conditions.push(sql`status IS NULL OR status = 'pending'`);
-      
+
       const location = 'San Francisco';
       if (location) {
         conditions.push(like(sql`location`, `%${location}%`));
       }
-      
+
       expect(conditions).toHaveLength(2);
-      
+
       const combinedCondition = and(...conditions);
       expect(combinedCondition).toBeDefined();
     });
 
     it('should handle case with only salary filters', () => {
       const conditions: SQL<unknown>[] = [];
-      
+
       conditions.push(sql`status IS NULL OR status = 'pending'`);
-      
+
       const salaryMin = 80000;
       const salaryMax = 120000;
-      
+
       if (salaryMin !== undefined) {
         conditions.push(sql`salary_max >= ${salaryMin}`);
       }
       if (salaryMax !== undefined) {
         conditions.push(sql`salary_min <= ${salaryMax}`);
       }
-      
+
       expect(conditions).toHaveLength(3);
-      
+
       const combinedCondition = and(...conditions);
       expect(combinedCondition).toBeDefined();
     });
 
     it('should handle case with all filters combined', () => {
       const conditions: SQL<unknown>[] = [];
-      
+
       // Base condition
       conditions.push(sql`status IS NULL OR status = 'pending'`);
-      
+
       // All filters applied
       const blockedCompanies = ['BlockedCorp'];
       const search = 'Developer';
       const location = 'Remote';
       const salaryMin = 90000;
       const salaryMax = 130000;
-      
+
       if (blockedCompanies.length > 0) {
         conditions.push(not(inArray(sql`company`, blockedCompanies)));
       }
-      
+
       if (search) {
         conditions.push(
           or(
@@ -170,22 +170,22 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
           )!
         );
       }
-      
+
       if (location) {
         conditions.push(like(sql`location`, `%${location}%`));
       }
-      
+
       if (salaryMin !== undefined) {
         conditions.push(sql`salary_max >= ${salaryMin}`);
       }
-      
+
       if (salaryMax !== undefined) {
         conditions.push(sql`salary_min <= ${salaryMax}`);
       }
-      
+
       // All 6 conditions should be present
       expect(conditions).toHaveLength(6);
-      
+
       // All conditions can be combined
       const combinedCondition = and(...conditions);
       expect(combinedCondition).toBeDefined();
@@ -343,7 +343,7 @@ describe('User Job Status - Unique Constraint (Issue #7)', () => {
   describe('Migration Validation', () => {
     it('should have correct migration SQL for unique index', () => {
       const expectedSQL = 'CREATE UNIQUE INDEX IF NOT EXISTS "user_job_status_user_id_job_id_unique" ON "user_job_status" USING btree ("user_id","job_id");';
-      
+
       // This validates that the migration has the correct structure
       // The actual SQL execution is tested during migration
       expect(expectedSQL).toContain('CREATE UNIQUE INDEX');

@@ -75,8 +75,8 @@ describe('Rollback API Integration Tests', () => {
       const result = await jobService.rollbackJob(mockUserId, mockJobId);
 
       expect(result).toBeDefined();
-      expect(result.application.generatedResumeId).toBe(mockResumeId);
-      expect(result.application.generatedCoverLetterId).toBe(mockCoverLetterId);
+      expect(result.application!.generatedResumeId).toBe(mockResumeId);
+      expect(result.application!.generatedCoverLetterId).toBe(mockCoverLetterId);
     });
 
     it('should cancel pending workflow during rollback', async () => {
@@ -138,8 +138,8 @@ describe('Rollback API Integration Tests', () => {
 
       const result = await jobService.rollbackJob(mockUserId, mockJobId);
 
-      expect(result.application.generatedResumeId).toBe(mockResumeId);
-      expect(result.application.generatedCoverLetterId).toBe(mockCoverLetterId);
+      expect(result.application!.generatedResumeId).toBe(mockResumeId);
+      expect(result.application!.generatedCoverLetterId).toBe(mockCoverLetterId);
     });
 
     it('should delete application record during rollback', async () => {

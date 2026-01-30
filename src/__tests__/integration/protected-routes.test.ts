@@ -114,7 +114,7 @@ describe('Protected Routes - Unauthorized Access Prevention', () => {
             expect(hasAuth).toBe(false);
 
             // These requests should fail with 401
-            protectedRoutes.forEach(route => {
+            protectedRoutes.forEach(_route => {
                 // Simulating the auth middleware check
                 const shouldReject = !headers['Authorization'];
                 expect(shouldReject).toBe(true);

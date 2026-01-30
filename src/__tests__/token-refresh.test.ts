@@ -29,7 +29,7 @@ vi.mock('../middleware/logger', () => ({
  */
 describe('Token Refresh Endpoint', () => {
   const JWT_SECRET = 'test-secret';
-  
+
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.JWT_SECRET = JWT_SECRET;
@@ -39,7 +39,7 @@ describe('Token Refresh Endpoint', () => {
   describe('parseExpiresIn helper function', () => {
     // We'll test the helper function through the endpoint behavior
     // since it's not exported, but we can verify its effects
-    
+
     it('should handle "7d" expiration format', async () => {
       // The default expiration is 7d which equals 7 * 24 * 60 * 60 = 604800 seconds
       const expectedSeconds = 7 * 24 * 60 * 60;
@@ -71,7 +71,7 @@ describe('Token Refresh Endpoint', () => {
       };
 
       const token = await sign(mockPayload, JWT_SECRET);
-      
+
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
     });
@@ -79,7 +79,7 @@ describe('Token Refresh Endpoint', () => {
     it('should create tokens with proper expiration', async () => {
       const currentTime = Math.floor(Date.now() / 1000);
       const expiresInSeconds = 7 * 24 * 60 * 60; // 7 days
-      
+
       const mockPayload = {
         userId: 'user-123',
         email: 'test@example.com',
@@ -87,7 +87,7 @@ describe('Token Refresh Endpoint', () => {
       };
 
       const token = await sign(mockPayload, JWT_SECRET);
-      
+
       expect(token).toBeDefined();
       // The token should be a JWT with 3 parts separated by dots
       const parts = token.split('.');
@@ -98,7 +98,7 @@ describe('Token Refresh Endpoint', () => {
       // This would be tested in integration test
       // Here we just verify the logic is sound
       const authHeader = undefined;
-      const hasValidHeader = authHeader && authHeader.startsWith('Bearer ');
+      const hasValidHeader = authHeader && (authHeader as string).startsWith('Bearer ');
       expect(hasValidHeader).toBe(false);
     });
 

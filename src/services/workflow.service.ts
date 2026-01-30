@@ -1,5 +1,5 @@
 import { db } from '../lib/db';
-import { workflowRuns, applications, userSettings, jobs, userProfiles, generatedResumes, generatedCoverLetters } from '../db/schema';
+import { workflowRuns, applications, userSettings, jobs, userProfiles, generatedResumes, generatedCoverLetters, users } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors';
 import { logger } from '../middleware/logger';
@@ -80,12 +80,19 @@ export const workflowService = {
         return { success: false, error: 'Job not found' };
       }
 
-      // Fetch user profile
-      const [profile] = await db
-        .select()
+      // Fetch user profile and email
+      const [profileData] = await db
+        .select({
+          profile: userProfiles,
+          email: users.email
+        })
         .from(userProfiles)
+        .innerJoin(users, eq(users.id, userProfiles.userId))
         .where(eq(userProfiles.userId, userId))
         .limit(1);
+
+      const profile = profileData?.profile;
+      const userEmail = profileData?.email;
 
       // Fetch user settings for base resume/cover letter
       const [settings] = await db
@@ -134,7 +141,7 @@ export const workflowService = {
         userProfile: profile ? {
           firstName: profile.firstName,
           lastName: profile.lastName,
-          email: profile.email,
+          email: userEmail,
           phone: profile.phone,
           linkedinUrl: profile.linkedinUrl,
           address: profile.address,
