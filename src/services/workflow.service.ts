@@ -21,7 +21,7 @@ export const workflowService = {
   async createWorkflowRun(userId: string, applicationId: string, jobId: string): Promise<any> {
     // Use deterministic idempotency key to prevent duplicate workflows
     const idempotencyKey = `workflow-${userId}-${applicationId}`;
-    
+
     // Check if workflow already exists
     const existing = await db
       .select()
@@ -48,6 +48,147 @@ export const workflowService = {
 
     logger.info({ workflowRunId: workflowRun.id, applicationId }, 'Workflow run created');
     return workflowRun;
+  },
+
+  /**
+   * Trigger n8n workflow for document generation
+   * This calls the n8n webhook to start resume/cover letter customization
+   * Includes all job details and user profile so n8n doesn't need database access
+   */
+  async triggerN8nDocumentGeneration(
+    userId: string,
+    jobId: string,
+    applicationId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
+    const n8nWebhookSecret = process.env.N8N_WEBHOOK_SECRET;
+
+    if (!n8nWebhookUrl) {
+      logger.warn('N8N_WEBHOOK_URL not configured, skipping n8n trigger');
+      return { success: false, error: 'N8N_WEBHOOK_URL not configured' };
+    }
+
+    try {
+      // Fetch job details
+      const [jobDetails] = await db
+        .select()
+        .from(jobs)
+        .where(eq(jobs.id, jobId))
+        .limit(1);
+
+      if (!jobDetails) {
+        return { success: false, error: 'Job not found' };
+      }
+
+      // Fetch user profile
+      const [profile] = await db
+        .select()
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, userId))
+        .limit(1);
+
+      // Fetch user settings for base resume/cover letter
+      const [settings] = await db
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, userId))
+        .limit(1);
+
+      // Get base resume URL if configured
+      let baseResumeUrl: string | null = null;
+      if (settings?.baseResumeId) {
+        const { resumeFiles } = await import('../db/schema');
+        const [resume] = await db
+          .select()
+          .from(resumeFiles)
+          .where(eq(resumeFiles.id, settings.baseResumeId))
+          .limit(1);
+        baseResumeUrl = resume?.fileUrl || null;
+      }
+
+      const requestId = crypto.randomUUID();
+      const payload = {
+        requestId,
+        userId,
+        jobId,
+        applicationId,
+        timestamp: new Date().toISOString(),
+
+        // Job details for document generation
+        job: {
+          id: jobDetails.id,
+          company: jobDetails.company,
+          position: jobDetails.position,
+          location: jobDetails.location,
+          salary: jobDetails.salary,
+          description: jobDetails.description,
+          shortDescription: jobDetails.shortDescription,
+          requiredSkills: jobDetails.requiredSkills,
+          optionalSkills: jobDetails.optionalSkills,
+          jobType: jobDetails.jobType,
+          yearsOfExperience: jobDetails.yearsOfExperience,
+          germanRequirement: jobDetails.germanRequirement,
+        },
+
+        // User profile for personalization
+        userProfile: profile ? {
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          email: profile.email,
+          phone: profile.phone,
+          linkedinUrl: profile.linkedinUrl,
+          address: profile.address,
+          city: profile.city,
+          state: profile.state,
+          zipCode: profile.zipCode,
+          country: profile.country,
+          summary: profile.summary,
+          headline: profile.headline,
+        } : null,
+
+        // Base resume URL for customization
+        baseResumeUrl,
+        baseCoverLetterUrl: settings?.baseCoverLetterUrl || null,
+      };
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add auth header if secret is configured
+      if (n8nWebhookSecret) {
+        headers['Authorization'] = `Bearer ${n8nWebhookSecret}`;
+      }
+
+      const response = await fetch(`${n8nWebhookUrl}/generate-documents`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error({
+          status: response.status,
+          error: errorText,
+          applicationId
+        }, 'n8n webhook call failed');
+        return { success: false, error: `n8n returned ${response.status}: ${errorText}` };
+      }
+
+      logger.info({
+        requestId,
+        applicationId,
+        jobId,
+        company: jobDetails.company,
+        position: jobDetails.position,
+      }, 'n8n document generation triggered successfully');
+
+      return { success: true };
+    } catch (error) {
+      logger.error({ error, applicationId }, 'Failed to trigger n8n workflow');
+      return { success: false, error: String(error) };
+    }
   },
 
   /**
@@ -90,7 +231,7 @@ export const workflowService = {
     errorMessage?: string
   ): Promise<void> {
     const workflowRun = await this.getWorkflowRun(workflowRunId);
-    
+
     const updateData: any = {
       status,
       updatedAt: new Date(),
@@ -164,7 +305,7 @@ export const workflowService = {
   async processWorkflow(workflowRunId: string): Promise<void> {
     try {
       const workflowRun = await this.getWorkflowRun(workflowRunId);
-      
+
       // Check if workflow was cancelled
       if (workflowRun.status === 'cancelled') {
         logger.info({ workflowRunId }, 'Workflow was cancelled, skipping processing');

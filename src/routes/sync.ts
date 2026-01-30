@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { scraperService } from '../services/scraper.service';
+import { timerService } from '../services/timer.service';
 import { formatResponse } from '../lib/utils';
 
 const sync = new Hono<AppContext>();
@@ -21,6 +22,15 @@ sync.get('/status', async (c) => {
   const status = await scraperService.getLastSyncStatus();
 
   return c.json(formatResponse(true, status, null, requestId));
+});
+
+// POST /api/sync/timers - Process pending timers (for cron job)
+sync.post('/timers', async (c) => {
+  const requestId = c.get('requestId');
+
+  await timerService.processPendingTimers();
+
+  return c.json(formatResponse(true, { message: 'Timers processed' }, null, requestId));
 });
 
 export default sync;

@@ -2,7 +2,10 @@ import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { applicationService } from '../services/application.service';
 import { formatResponse, parseIntSafe } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
+import { ValidationError, NotFoundError } from '../lib/errors';
+import { db } from '../lib/db';
+import { applications } from '../db/schema';
+import { eq, and } from 'drizzle-orm';
 
 const applicationHistory = new Hono<AppContext>();
 
@@ -56,13 +59,13 @@ applicationHistory.get('/export', async (c) => {
 
   if (format === 'csv') {
     const csvContent = await applicationService.exportApplicationsToCSV(result.items);
-    
+
     c.header('Content-Type', 'text/csv');
     c.header('Content-Disposition', `attachment; filename="applications-${Date.now()}.csv"`);
     return c.text(csvContent);
   } else {
     const pdfBuffer = await applicationService.exportApplicationsToPDF(result.items);
-    
+
     return new Response(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
@@ -72,4 +75,51 @@ applicationHistory.get('/export', async (c) => {
   }
 });
 
+// GET /api/application-history/:applicationId/download/:type
+// Download resume or cover letter for an application
+applicationHistory.get('/:applicationId/download/:type', async (c) => {
+  const auth = c.get('auth');
+  const applicationId = c.req.param('applicationId');
+  const type = c.req.param('type'); // 'resume' or 'cover-letter'
+
+  if (!['resume', 'cover-letter'].includes(type)) {
+    throw new ValidationError('Invalid type. Must be "resume" or "cover-letter".');
+  }
+
+  // Get application and verify ownership
+  const [app] = await db
+    .select()
+    .from(applications)
+    .where(and(eq(applications.id, applicationId), eq(applications.userId, auth.userId)))
+    .limit(1);
+
+  if (!app) {
+    throw new NotFoundError('Application');
+  }
+
+  const url = type === 'resume' ? app.customResumeUrl : app.customCoverLetterUrl;
+
+  if (!url) {
+    throw new NotFoundError(`${type === 'resume' ? 'Resume' : 'Cover letter'} not found for this application`);
+  }
+
+  // Fetch the file from S3/Cloudflare
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch document: ${response.status}`);
+  }
+
+  const buffer = await response.arrayBuffer();
+  const filename = type === 'resume' ? 'resume.pdf' : 'cover_letter.pdf';
+
+  return new Response(buffer, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    },
+  });
+});
+
 export default applicationHistory;
+

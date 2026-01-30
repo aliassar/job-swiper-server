@@ -7,6 +7,7 @@ import { loggerMiddleware } from './middleware/logger';
 import { rateLimitMiddleware } from './middleware/rate-limit';
 import { errorHandler } from './middleware/error-handler';
 import api from './routes';
+import { timerService } from './services/timer.service';
 
 const app = new Hono<AppContext>();
 
@@ -56,6 +57,17 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     port,
     hostname: '0.0.0.0',
   });
+
+  // Start automatic timer processing (polls every 5 seconds)
+  console.log('⏰ Starting automatic timer processing...');
+  setInterval(async () => {
+    try {
+      await timerService.processPendingTimers();
+    } catch (error) {
+      console.error('Error processing timers:', error);
+    }
+  }, 5000); // Check every 5 seconds
 }
 
 export default app;
+

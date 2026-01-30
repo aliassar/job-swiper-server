@@ -21,18 +21,12 @@ const statusUpdateSchema = z.object({
   applicationId: z.string().uuid(),
   userId: z.string(),
   newStage: z.enum([
-    'Syncing',
-    'CV Check',
-    'Message Check',
     'Being Applied',
     'Applied',
-    'Interview 1',
-    'Next Interviews',
-    'Offer',
-    'Rejected',
+    'In Review',
     'Accepted',
+    'Rejected',
     'Withdrawn',
-    'Failed',
   ]),
   metadata: z.record(z.unknown()).optional(),
   timestamp: z.string(),
@@ -92,7 +86,7 @@ webhooks.post('/status-update', async (c) => {
   await applicationService.updateApplicationStage(
     data.userId,
     data.applicationId,
-    data.newStage as 'Syncing' | 'CV Check' | 'Message Check' | 'Being Applied' | 'Applied' | 'Interview 1' | 'Next Interviews' | 'Offer' | 'Rejected' | 'Accepted' | 'Withdrawn' | 'Failed'
+    data.newStage as 'Being Applied' | 'Applied' | 'In Review' | 'Accepted' | 'Rejected' | 'Withdrawn'
   );
 
   // Create notification for user
@@ -135,7 +129,7 @@ webhooks.post('/generation-complete', async (c) => {
       // and link it to the application. For now, we just log this.
       console.log('Cover letter generated successfully:', { s3Key: data.s3Key, filename: data.filename });
     }
-    
+
     // Create notification for user
     await notificationService.createNotification(
       data.userId,
@@ -182,7 +176,7 @@ webhooks.post('/application-submitted', async (c) => {
       .update(applications)
       .set({ appliedAt: new Date(data.submittedAt || new Date().toISOString()) })
       .where(eq(applications.id, data.applicationId));
-    
+
     // Create notification
     await notificationService.createNotification(
       data.userId,
@@ -196,9 +190,9 @@ webhooks.post('/application-submitted', async (c) => {
       }
     );
   } else {
-    // Update application status to 'Failed'
-    await applicationService.updateApplicationStage(data.userId, data.applicationId, 'Failed');
-    
+    // Update application status to 'Rejected' (submission failed)
+    await applicationService.updateApplicationStage(data.userId, data.applicationId, 'Rejected');
+
     // Create failure notification
     await notificationService.createNotification(
       data.userId,

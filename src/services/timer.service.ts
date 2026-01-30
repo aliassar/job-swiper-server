@@ -71,11 +71,11 @@ export const timerService = {
   },
 
   /**
-   * Schedule auto-apply delay timer (1 minute)
+   * Schedule auto-apply delay timer (1 second for testing - CHANGE BACK TO 1 MINUTE FOR PROD)
    */
   async scheduleAutoApplyDelay(userId: string, applicationId: string): Promise<string> {
     const executeAt = new Date();
-    executeAt.setMinutes(executeAt.getMinutes() + 1); // 1 minute delay
+    executeAt.setSeconds(executeAt.getSeconds() + 1); // 1 second delay for testing
 
     return this.scheduleTimer({
       userId,
