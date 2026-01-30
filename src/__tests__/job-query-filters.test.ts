@@ -74,8 +74,8 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
       if (search) {
         conditions.push(
           or(
-            like(sql`company`, `%${search}%`),
-            like(sql`position`, `%${search}%`)
+            like(sql`company` as any, `%${search}%`),
+            like(sql`position` as any, `%${search}%`)
           )!
         );
       }
@@ -96,8 +96,8 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
       if (search) {
         conditions.push(
           or(
-            like(sql`company`, `%${search}%`),
-            like(sql`position`, `%${search}%`)
+            like(sql`company` as any, `%${search}%`),
+            like(sql`position` as any, `%${search}%`)
           )!
         );
       }
@@ -115,7 +115,7 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
 
       const location = 'San Francisco';
       if (location) {
-        conditions.push(like(sql`location`, `%${location}%`));
+        conditions.push(like(sql`location` as any, `%${location}%`));
       }
 
       expect(conditions).toHaveLength(2);
@@ -165,14 +165,14 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
       if (search) {
         conditions.push(
           or(
-            like(sql`company`, `%${search}%`),
-            like(sql`position`, `%${search}%`)
+            like(sql`company` as any, `%${search}%`),
+            like(sql`position` as any, `%${search}%`)
           )!
         );
       }
 
       if (location) {
-        conditions.push(like(sql`location`, `%${location}%`));
+        conditions.push(like(sql`location` as any, `%${location}%`));
       }
 
       if (salaryMin !== undefined) {
@@ -212,13 +212,13 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
       if (search) {
         mainConditions.push(
           or(
-            like(sql`company`, `%${search}%`),
-            like(sql`position`, `%${search}%`)
+            like(sql`company` as any, `%${search}%`),
+            like(sql`position` as any, `%${search}%`)
           )!
         );
       }
       if (location) {
-        mainConditions.push(like(sql`location`, `%${location}%`));
+        mainConditions.push(like(sql`location` as any, `%${location}%`));
       }
       if (salaryMin !== undefined) {
         mainConditions.push(sql`salary_max >= ${salaryMin}`);
@@ -238,13 +238,13 @@ describe('Job Service - Query Filter Chaining (Issue #6)', () => {
       if (search) {
         countConditions.push(
           or(
-            like(sql`company`, `%${search}%`),
-            like(sql`position`, `%${search}%`)
+            like(sql`company` as any, `%${search}%`),
+            like(sql`position` as any, `%${search}%`)
           )!
         );
       }
       if (location) {
-        countConditions.push(like(sql`location`, `%${location}%`));
+        countConditions.push(like(sql`location` as any, `%${location}%`));
       }
       if (salaryMin !== undefined) {
         countConditions.push(sql`salary_max >= ${salaryMin}`);
