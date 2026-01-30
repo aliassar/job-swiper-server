@@ -1,6 +1,6 @@
 import { db } from '../lib/db';
 import { jobs, userJobStatus, actionHistory, userSettings, applications, blockedCompanies, reportedJobs, workflowRuns } from '../db/schema';
-import { eq, and, desc, sql, or, SQL, not, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, or, SQL, not } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { logger } from '../middleware/logger';
 import { timerService } from './timer.service';
@@ -81,9 +81,23 @@ export const jobService = {
       sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`
     ];
 
-    // Exclude blocked companies
+    // Exclude blocked companies using word-boundary matching
+    // Match if the blocked company name appears as complete word(s) in job company
+    // e.g., "Google" matches "Google Inc" but NOT "Googleplex"
     if (blockedCompanyNames.length > 0) {
-      conditions.push(not(inArray(jobs.company, blockedCompanyNames)));
+      const blockedConditions = blockedCompanyNames.map((companyName) => {
+        // Escape special regex characters and use word boundaries
+        const escapedName = companyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Use PostgreSQL regex with word boundaries: \m = word start, \M = word end
+        // Match if job company contains blocked name as complete word(s)
+        // Also match if blocked name contains job company (using ILIKE for safety with special chars)
+        return or(
+          sql`${jobs.company} ~* ${`\\m${escapedName}\\M`}`,
+          sql`${jobs.company} ILIKE ${`%${companyName}%`}`
+        );
+      });
+      // Exclude jobs that match ANY blocked company pattern
+      conditions.push(not(or(...blockedConditions)!));
     }
 
     // Add search if provided (case-insensitive)
@@ -126,8 +140,16 @@ export const jobService = {
       sql`(${userJobStatus.status} IS NULL OR ${userJobStatus.status} = 'pending')`
     ];
 
+    // Use the same word-boundary matching for count query
     if (blockedCompanyNames.length > 0) {
-      countConditions.push(not(inArray(jobs.company, blockedCompanyNames)));
+      const blockedConditions = blockedCompanyNames.map((companyName) => {
+        const escapedName = companyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return or(
+          sql`${jobs.company} ~* ${`\\m${escapedName}\\M`}`,
+          sql`${jobs.company} ILIKE ${`%${companyName}%`}`
+        );
+      });
+      countConditions.push(not(or(...blockedConditions)!));
     }
 
     if (search) {
@@ -587,67 +609,71 @@ export const jobService = {
         : (userPrefs?.autoApplyEnabled ?? false);
 
 
-      // Create workflow run with deterministic idempotency key
+      // ALWAYS create workflow run for document generation
+      // (regardless of auto-apply setting - resumes should always be customized)
       let workflowRun = null;
-      if (shouldAutoApply) {
-        // Use deterministic key - same application always gets same workflow key
-        const idempotencyKey = `workflow-${userId}-${application.id}`;
 
-        // Check if workflow already exists (handles retries)
-        const existingWorkflow = await tx
-          .select()
-          .from(workflowRuns)
-          .where(eq(workflowRuns.idempotencyKey, idempotencyKey))
-          .limit(1);
+      // Use deterministic key - same application always gets same workflow key
+      const idempotencyKey = `workflow-${userId}-${application.id}`;
 
-        if (existingWorkflow.length > 0) {
-          // Workflow already exists from a previous retry - use it
-          workflowRun = existingWorkflow[0];
-          logger.info({ userId, applicationId: application.id, workflowId: workflowRun.id },
-            'Workflow already exists for application (retry detected)');
-        } else {
-          const [workflow] = await tx
-            .insert(workflowRuns)
-            .values({
+      // Check if workflow already exists (handles retries)
+      const existingWorkflow = await tx
+        .select()
+        .from(workflowRuns)
+        .where(eq(workflowRuns.idempotencyKey, idempotencyKey))
+        .limit(1);
+
+      if (existingWorkflow.length > 0) {
+        // Workflow already exists from a previous retry - use it
+        workflowRun = existingWorkflow[0];
+        console.log(`📋 Workflow already exists for application ${application.id}`);
+        logger.info({ userId, applicationId: application.id, workflowId: workflowRun.id },
+          'Workflow already exists for application (retry detected)');
+      } else {
+        const [workflow] = await tx
+          .insert(workflowRuns)
+          .values({
+            userId,
+            applicationId: application.id,
+            idempotencyKey,
+            status: 'pending',
+            currentStep: 'initialized',
+            metadata: { jobId, shouldAutoApply },
+          })
+          .returning();
+
+        workflowRun = workflow;
+        console.log(`✅ Workflow created for application ${application.id}`);
+
+        // Schedule delay timer for document generation
+        const failureTimestamp = new Date();
+        try {
+          const timerId = await timerService.scheduleAutoApplyDelay(userId, application.id);
+          console.log(`⏰ Timer scheduled: ${timerId}`);
+          if (!timerId || timerId === '') {
+            logger.error({ userId, applicationId: application.id }, 'Failed to create auto-apply delay timer');
+            // Update workflow status to indicate scheduling failure
+            await tx
+              .update(workflowRuns)
+              .set({
+                status: 'failed',
+                currentStep: 'timer_scheduling_failed',
+                updatedAt: failureTimestamp,
+              })
+              .where(eq(workflowRuns.id, workflowRun.id));
+          } else {
+            logger.info({
               userId,
+              jobId,
               applicationId: application.id,
-              idempotencyKey,
-              status: 'pending',
-              currentStep: 'initialized',
-              metadata: { jobId },
-            })
-            .returning();
-
-          workflowRun = workflow;
-
-          // Schedule 1-minute delay timer with validation
-          const failureTimestamp = new Date();
-          try {
-            const timerId = await timerService.scheduleAutoApplyDelay(userId, application.id);
-            if (!timerId || timerId === '') {
-              logger.error({ userId, applicationId: application.id }, 'Failed to create auto-apply delay timer');
-              // Update workflow status to indicate scheduling failure
-              await tx
-                .update(workflowRuns)
-                .set({
-                  status: 'failed',
-                  currentStep: 'timer_scheduling_failed',
-                  updatedAt: failureTimestamp,
-                })
-                .where(eq(workflowRuns.id, workflowRun.id));
-            } else {
-              logger.info({
-                userId,
-                jobId,
-                applicationId: application.id,
-                workflowRunId: workflow.id,
-                timerId
-              }, 'Auto-apply workflow scheduled with 1-minute delay');
-            }
-          } catch (timerError) {
-            logger.error({ error: timerError, userId, applicationId: application.id }, 'Exception while scheduling auto-apply timer');
-            // Don't fail the job acceptance, but log the issue
+              workflowRunId: workflow.id,
+              timerId
+            }, 'Document generation workflow scheduled');
           }
+        } catch (timerError) {
+          console.log(`❌ Timer scheduling failed: ${timerError}`);
+          logger.error({ error: timerError, userId, applicationId: application.id }, 'Exception while scheduling timer');
+          // Don't fail the job acceptance, but log the issue
         }
       }
 
@@ -684,8 +710,8 @@ export const jobService = {
       const app = existingApplication[0];
 
       // Check if application has progressed to an irreversible stage
-      // Only 'Syncing' stage (initial state) can be rolled back
-      const irreversibleStages = ['Applied', 'Interview', 'Offer', 'Hired', 'Rejected'];
+      // Only 'Being Applied' stage (initial state) can be rolled back
+      const irreversibleStages = ['Applied', 'In Review', 'Accepted', 'Rejected'];
       if (irreversibleStages.includes(app.stage)) {
         logger.warn(
           { userId, jobId, applicationId: app.id, stage: app.stage },
@@ -794,7 +820,8 @@ export const jobService = {
     userId: string,
     jobId: string,
     reason: 'fake' | 'not_interested' | 'dont_recommend_company',
-    details?: string
+    details?: string,
+    blockCompany?: boolean
   ) {
     return await db.transaction(async (tx) => {
       // Get job details
@@ -811,9 +838,14 @@ export const jobService = {
         })
         .returning();
 
-      // If reason is 'dont_recommend_company', auto-block the company
-      if (reason === 'dont_recommend_company') {
-        await this.blockCompany(userId, job.company, 'Reported via dont_recommend_company', tx);
+      // Block company if:
+      // 1. reason is 'dont_recommend_company' (always block), OR
+      // 2. blockCompany flag is explicitly true
+      if (reason === 'dont_recommend_company' || blockCompany === true) {
+        const blockReason = reason === 'dont_recommend_company'
+          ? 'Reported via dont_recommend_company'
+          : `Reported as ${reason} with company block`;
+        await this.blockCompany(userId, job.company, blockReason, tx);
       }
 
       // Notify filtering microservice based on reason
