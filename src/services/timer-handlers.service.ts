@@ -21,9 +21,13 @@ export interface Timer {
 export const timerHandlers = {
   /**
    * Handle auto-apply delay timer (1 minute after job acceptance)
-   * Checks if workflow was rolled back before starting
+   * Triggers n8n workflow for resume/cover letter generation
    */
   async handleAutoApplyDelay(timer: Timer): Promise<void> {
+    console.log('\n📋 ===== AUTO-APPLY DELAY TIMER FIRED =====');
+    console.log(`   Timer ID: ${timer.id}`);
+    console.log(`   Application ID: ${timer.targetId}`);
+    console.log(`   User ID: ${timer.userId}`);
     logger.info({ timerId: timer.id, applicationId: timer.targetId }, 'Processing auto-apply delay timer');
 
     try {
@@ -37,135 +41,93 @@ export const timerHandlers = {
         .limit(1);
 
       if (application.length === 0) {
+        console.log('   ❌ Application not found');
         logger.warn({ applicationId }, 'Application not found for auto-apply timer');
         return;
       }
 
-      // Application exists but we don't need to use it here
-      // const _app = application[0];
+      const app = application[0];
+      console.log(`   Job ID: ${app.jobId}`);
 
       // Check if there's a workflow run for this application
       const workflowRun = await workflowService.getWorkflowByApplication(applicationId);
 
       if (!workflowRun) {
+        console.log('   ❌ No workflow run found');
         logger.warn({ applicationId }, 'No workflow run found for application');
         return;
       }
 
       // Check if workflow was cancelled (rolled back)
       if (workflowRun.status === 'cancelled') {
+        console.log('   ⚠️ Workflow was cancelled, skipping');
         logger.info({ applicationId, workflowRunId: workflowRun.id }, 'Workflow was cancelled, skipping auto-apply');
         return;
       }
 
-      // Start workflow processing
-      await workflowService.processWorkflow(workflowRun.id);
+      console.log('\n🚀 ===== CALLING n8n WEBHOOK =====');
+      console.log(`   URL: ${process.env.N8N_WEBHOOK_URL}/generate-documents`);
+
+      // Trigger n8n workflow for document generation
+      const result = await workflowService.triggerN8nDocumentGeneration(
+        timer.userId,
+        app.jobId,
+        applicationId
+      );
+
+      if (result.success) {
+        console.log('   ✅ n8n WEBHOOK CALLED SUCCESSFULLY!');
+        // Update workflow status to indicate n8n was triggered
+        await workflowService.updateWorkflowStatus(workflowRun.id, 'generating_resume');
+
+        // Update application stage directly to Applied (simplified flow)
+        await db
+          .update(applications)
+          .set({
+            stage: 'Applied',
+            appliedAt: new Date(),
+            lastUpdated: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(applications.id, applicationId));
+
+        console.log('   📄 Application stage updated to Applied');
+        console.log('===================================\n');
+        logger.info({ applicationId, workflowRunId: workflowRun.id }, 'n8n document generation triggered successfully');
+      } else {
+        console.log(`   ❌ n8n WEBHOOK FAILED: ${result.error}`);
+        console.log('===================================\n');
+        // Log error but don't fail - n8n might not be configured
+        logger.error({ applicationId, error: result.error }, 'Failed to trigger n8n document generation');
+
+        // Update workflow status to failed
+        await workflowService.updateWorkflowStatus(workflowRun.id, 'failed', result.error);
+      }
 
     } catch (error) {
+      console.log(`   ❌ ERROR: ${error}`);
+      console.log('===================================\n');
       logger.error({ error, timerId: timer.id }, 'Error processing auto-apply delay timer');
       throw error;
     }
   },
 
   /**
-   * Handle CV verification timeout (5 minutes after CV ready)
-   * Auto-confirms CV if user hasn't responded
+   * Handle CV verification timeout - DEPRECATED with simplified stages
+   * Kept for backward compatibility but does nothing
    */
   async handleCvVerificationTimeout(timer: Timer): Promise<void> {
-    logger.info({ timerId: timer.id, applicationId: timer.targetId }, 'Processing CV verification timeout');
-
-    try {
-      const applicationId = timer.targetId;
-
-      // Get application
-      const application = await db
-        .select()
-        .from(applications)
-        .where(eq(applications.id, applicationId))
-        .limit(1);
-
-      if (application.length === 0) {
-        logger.warn({ applicationId }, 'Application not found for CV verification timeout');
-        return;
-      }
-
-      const app = application[0];
-
-      // Only auto-confirm if still in CV Check stage
-      if (app.stage !== 'CV Check') {
-        logger.info({ applicationId, stage: app.stage }, 'Application not in CV Check stage, skipping auto-confirm');
-        return;
-      }
-
-      // Auto-confirm CV - update stage explicitly
-      logger.info({ applicationId }, 'Auto-confirming CV after timeout');
-
-      // Update application stage to Message Check
-      await db
-        .update(applications)
-        .set({
-          stage: 'Message Check',
-          lastUpdated: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(applications.id, applicationId));
-
-      // Get workflow run and continue
-      const workflowRun = await workflowService.getWorkflowByApplication(applicationId);
-      if (workflowRun) {
-        await workflowService.processWorkflow(workflowRun.id);
-      }
-
-    } catch (error) {
-      logger.error({ error, timerId: timer.id }, 'Error processing CV verification timeout');
-      throw error;
-    }
+    logger.info({ timerId: timer.id, applicationId: timer.targetId }, 'CV verification timeout handler called (deprecated with simplified stages)');
+    // No-op - CV Check stage no longer exists
   },
 
   /**
-   * Handle message verification timeout (5 minutes after message ready)
-   * Auto-confirms message if user hasn't responded
+   * Handle message verification timeout - DEPRECATED with simplified stages
+   * Kept for backward compatibility but does nothing
    */
   async handleMessageVerificationTimeout(timer: Timer): Promise<void> {
-    logger.info({ timerId: timer.id, applicationId: timer.targetId }, 'Processing message verification timeout');
-
-    try {
-      const applicationId = timer.targetId;
-
-      // Get application
-      const application = await db
-        .select()
-        .from(applications)
-        .where(eq(applications.id, applicationId))
-        .limit(1);
-
-      if (application.length === 0) {
-        logger.warn({ applicationId }, 'Application not found for message verification timeout');
-        return;
-      }
-
-      const app = application[0];
-
-      // Only auto-confirm if still in Message Check stage
-      if (app.stage !== 'Message Check') {
-        logger.info({ applicationId, stage: app.stage }, 'Application not in Message Check stage, skipping auto-confirm');
-        return;
-      }
-
-      // Auto-confirm message
-      logger.info({ applicationId }, 'Auto-confirming message after timeout');
-
-      // Get workflow run
-      const workflowRun = await workflowService.getWorkflowByApplication(applicationId);
-      if (workflowRun) {
-        // Continue workflow processing
-        await workflowService.processWorkflow(workflowRun.id);
-      }
-
-    } catch (error) {
-      logger.error({ error, timerId: timer.id }, 'Error processing message verification timeout');
-      throw error;
-    }
+    logger.info({ timerId: timer.id, applicationId: timer.targetId }, 'Message verification timeout handler called (deprecated with simplified stages)');
+    // No-op - Message Check stage no longer exists
   },
 
   /**
@@ -278,8 +240,8 @@ export const timerHandlers = {
 
       const app = application[0];
 
-      // Only send follow-up if application is in Applied or Interview stages
-      if (!['Applied', 'Interview 1', 'Next Interviews'].includes(app.stage)) {
+      // Only send follow-up if application is in Applied or In Review stage
+      if (!['Applied', 'In Review'].includes(app.stage)) {
         logger.info({ applicationId, stage: app.stage }, 'Application not in valid stage for follow-up');
         return;
       }
@@ -360,7 +322,7 @@ export const timerHandlers = {
             logger.warn({ userId }, 'User or job not found for follow-up email');
           } else {
             const { userEmail, company, position, location } = userAndJob[0];
-            
+
             // Escape HTML to prevent injection
             const companyName = escapeHtml(company || 'Unknown Company');
             const positionTitle = escapeHtml(position || 'Unknown Position');
