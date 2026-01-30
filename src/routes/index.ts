@@ -22,6 +22,8 @@ import emailConnections from './email-connections';
 import userProfile from './user-profile';
 import applicationHistory from './application-history';
 import admin from './admin';
+import internal from './internal';
+import blockedCompanies from './blocked-companies';
 
 const api = new Hono<AppContext>();
 
@@ -158,6 +160,9 @@ api.route('/auth', auth);
 // Webhook endpoints (no auth required - use custom auth middleware)
 api.route('/webhooks', webhooks);
 
+// Internal endpoints for n8n/microservices (protected by INTERNAL_API_SECRET)
+api.route('/internal', internal);
+
 // SSE stream endpoint (custom auth via query param since EventSource doesn't support headers)
 // Must be mounted BEFORE auth middleware is applied to /notifications/*
 api.get('/notifications/stream', async (c) => {
@@ -258,6 +263,8 @@ api.use('/user-profile', authMiddleware);
 api.use('/user-profile/*', authMiddleware);
 api.use('/notifications', authMiddleware);
 api.use('/notifications/*', authMiddleware);
+api.use('/blocked-companies', authMiddleware);
+api.use('/blocked-companies/*', authMiddleware);
 
 // Mount routes
 api.route('/jobs', jobs);
@@ -275,5 +282,6 @@ api.route('/email-connections', emailConnections);
 api.route('/users', users);
 api.route('/user-profile', userProfile);
 api.route('/notifications', notifications);
+api.route('/blocked-companies', blockedCompanies);
 
 export default api;

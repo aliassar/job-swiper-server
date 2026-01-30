@@ -1,9 +1,8 @@
 import { db } from '../lib/db';
-import { applications, jobs, actionHistory, generatedResumes, generatedCoverLetters, resumeFiles, workflowRuns } from '../db/schema';
+import { applications, jobs, actionHistory, generatedResumes, generatedCoverLetters, workflowRuns } from '../db/schema';
 import { eq, and, desc, sql, or, SQL, gte, lte, between } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors';
 import { logger } from '../middleware/logger';
-import { storage } from '../lib/storage';
 import { timerService } from './timer.service';
 import PDFDocument from 'pdfkit';
 import { prepareCaseInsensitiveSearch } from '../lib/utils';
@@ -34,6 +33,8 @@ export const applicationService = {
         createdAt: applications.createdAt,
         lastUpdated: applications.lastUpdated,
         updatedAt: applications.updatedAt,
+        customResumeUrl: applications.customResumeUrl,
+        customCoverLetterUrl: applications.customCoverLetterUrl,
         jobId: jobs.id,
         company: jobs.company,
         position: jobs.position,
@@ -47,6 +48,7 @@ export const applicationService = {
         logoUrl: jobs.logoUrl,
         srcName: jobs.srcName,
         applyLink: jobs.applyLink,
+        jobUrl: jobs.jobUrl,
         germanRequirement: jobs.germanRequirement,
         yearsOfExperience: jobs.yearsOfExperience,
       })
@@ -87,6 +89,8 @@ export const applicationService = {
         createdAt: item.createdAt,
         lastUpdated: item.lastUpdated,
         updatedAt: item.updatedAt,
+        customResumeUrl: item.customResumeUrl,
+        customCoverLetterUrl: item.customCoverLetterUrl,
         // Flatten job fields for frontend compatibility
         jobId: item.jobId,
         company: item.company,
@@ -101,6 +105,7 @@ export const applicationService = {
         logoUrl: item.logoUrl,
         srcName: item.srcName,
         applyLink: item.applyLink,
+        jobUrl: item.jobUrl,
         germanRequirement: item.germanRequirement,
         yearsOfExperience: item.yearsOfExperience,
       })),
@@ -130,7 +135,7 @@ export const applicationService = {
   async updateApplicationStage(
     userId: string,
     applicationId: string,
-    stage: 'Syncing' | 'CV Check' | 'Message Check' | 'Being Applied' | 'Applied' | 'Interview 1' | 'Next Interviews' | 'Offer' | 'Rejected' | 'Accepted' | 'Withdrawn' | 'Failed'
+    stage: 'Being Applied' | 'Applied' | 'In Review' | 'Accepted' | 'Rejected' | 'Withdrawn'
   ) {
     const application = await this.getApplicationById(userId, applicationId);
 
@@ -169,7 +174,7 @@ export const applicationService = {
         userId,
         jobId,
         resumeFileId,
-        stage: 'Syncing',
+        stage: 'Being Applied',
         lastUpdated: new Date(),
       })
       .returning();
@@ -263,123 +268,9 @@ export const applicationService = {
     return await this.getApplicationById(userId, applicationId);
   },
 
-  /**
-   * Confirm CV verification
-   */
-  async confirmCvVerification(userId: string, applicationId: string) {
-    const application = await this.getApplicationById(userId, applicationId);
+  // CV Check and Message Check verification methods removed - no longer needed with simplified stages
 
-    if (application.stage !== 'CV Check') {
-      throw new Error('Application is not in CV Check stage');
-    }
-
-    // Cancel any pending CV verification timers
-    await timerService.cancelTimersByTarget(applicationId, 'cv_verification');
-
-    // Move to next stage
-    await this.updateApplicationStage(userId, applicationId, 'Message Check');
-
-    logger.info({ userId, applicationId }, 'CV verified by user');
-
-    return await this.getApplicationById(userId, applicationId);
-  },
-
-  /**
-   * Reject CV and reupload
-   */
-  async rejectCvAndReupload(userId: string, applicationId: string, newResumeFile: any) {
-    const application = await this.getApplicationById(userId, applicationId);
-
-    if (application.stage !== 'CV Check') {
-      throw new Error('Application is not in CV Check stage');
-    }
-
-    // Cancel any pending CV verification timers
-    await timerService.cancelTimersByTarget(applicationId, 'cv_verification');
-
-    // Upload new resume
-    const key = storage.generateKey(userId, 'resume', newResumeFile.filename);
-    const fileUrl = await storage.uploadFile(key, newResumeFile.buffer, newResumeFile.mimetype);
-
-    // Create new resume file record
-    const [resumeFile] = await db
-      .insert(resumeFiles)
-      .values({
-        userId,
-        filename: newResumeFile.filename,
-        fileUrl,
-        isPrimary: false,
-        isReference: false,
-      })
-      .returning();
-
-    // Update application
-    await db
-      .update(applications)
-      .set({
-        resumeFileId: resumeFile.id,
-        updatedAt: new Date(),
-      })
-      .where(eq(applications.id, applicationId));
-
-    logger.info({ userId, applicationId }, 'CV rejected and reuploaded');
-
-    // Schedule new CV verification timer
-    await timerService.scheduleCvVerificationTimer(userId, applicationId);
-
-    return await this.getApplicationById(userId, applicationId);
-  },
-
-  /**
-   * Confirm message verification
-   */
-  async confirmMessageVerification(userId: string, applicationId: string) {
-    const application = await this.getApplicationById(userId, applicationId);
-
-    if (application.stage !== 'Message Check') {
-      throw new Error('Application is not in Message Check stage');
-    }
-
-    // Cancel any pending message verification timers
-    await timerService.cancelTimersByTarget(applicationId, 'message_verification');
-
-    // Move to next stage - Being Applied
-    await this.updateApplicationStage(userId, applicationId, 'Being Applied');
-
-    logger.info({ userId, applicationId }, 'Message verified by user, moving to Being Applied stage');
-
-    return await this.getApplicationById(userId, applicationId);
-  },
-
-  /**
-   * Update and confirm message
-   */
-  async updateAndConfirmMessage(userId: string, applicationId: string, editedMessage: string) {
-    const application = await this.getApplicationById(userId, applicationId);
-
-    if (application.stage !== 'Message Check') {
-      throw new Error('Application is not in Message Check stage');
-    }
-
-    // Cancel any pending message verification timers
-    await timerService.cancelTimersByTarget(applicationId, 'message_verification');
-
-    // Update message
-    await db
-      .update(applications)
-      .set({
-        generatedMessage: editedMessage,
-        updatedAt: new Date(),
-      })
-      .where(eq(applications.id, applicationId));
-
-    // Move to next stage - Being Applied
-    await this.updateApplicationStage(userId, applicationId, 'Being Applied');
-
-    logger.info({ userId, applicationId }, 'Message updated and verified by user, moving to Being Applied stage');
-
-    return await this.getApplicationById(userId, applicationId);
-  },
+  // Message verification methods removed - no longer needed with simplified stages
 
   /**
    * Handle application rollback

@@ -12,27 +12,17 @@ const applications = new Hono<AppContext>();
 // Validation schemas
 const updateStageSchema = z.object({
   stage: z.enum([
-    'Syncing',
-    'CV Check',
-    'Message Check',
     'Being Applied',
     'Applied',
-    'Interview 1',
-    'Next Interviews',
-    'Offer',
-    'Rejected',
+    'In Review',
     'Accepted',
+    'Rejected',
     'Withdrawn',
-    'Failed',
   ]),
 });
 
 const updateNotesSchema = z.object({
   notes: z.string(),
-});
-
-const updateMessageSchema = z.object({
-  message: z.string(),
 });
 
 const updateDocumentsSchema = z.object({
@@ -147,79 +137,7 @@ applications.put('/:id/notes', validateUuidParam('id'), async (c) => {
   return c.json(formatResponse(true, application, null, requestId));
 });
 
-// POST /api/applications/:id/cv/confirm - Confirm CV
-applications.post('/:id/cv/confirm', validateUuidParam('id'), async (c) => {
-  const auth = c.get('auth');
-  const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
-
-  const application = await applicationService.confirmCvVerification(auth.userId, applicationId);
-
-  return c.json(formatResponse(true, application, null, requestId));
-});
-
-// POST /api/applications/:id/cv/reupload - Reupload CV
-applications.post('/:id/cv/reupload', validateUuidParam('id'), async (c) => {
-  const auth = c.get('auth');
-  const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
-
-  // Get file from form data
-  const formData = await c.req.formData();
-  const file = formData.get('file') as File | null;
-
-  if (!file) {
-    throw new ValidationError('No file provided');
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const newResumeFile = {
-    filename: file.name,
-    buffer,
-    mimetype: file.type,
-  };
-
-  const application = await applicationService.rejectCvAndReupload(
-    auth.userId,
-    applicationId,
-    newResumeFile
-  );
-
-  return c.json(formatResponse(true, application, null, requestId));
-});
-
-// POST /api/applications/:id/message/confirm - Confirm message
-applications.post('/:id/message/confirm', validateUuidParam('id'), async (c) => {
-  const auth = c.get('auth');
-  const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
-
-  const application = await applicationService.confirmMessageVerification(auth.userId, applicationId);
-
-  return c.json(formatResponse(true, application, null, requestId));
-});
-
-// PUT /api/applications/:id/message - Edit message
-applications.put('/:id/message', validateUuidParam('id'), async (c) => {
-  const auth = c.get('auth');
-  const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
-
-  const body = await c.req.json();
-  const validated = updateMessageSchema.safeParse(body);
-
-  if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
-  }
-
-  const application = await applicationService.updateAndConfirmMessage(
-    auth.userId,
-    applicationId,
-    validated.data.message
-  );
-
-  return c.json(formatResponse(true, application, null, requestId));
-});
+// CV and Message verification routes removed - no longer needed with simplified stages
 
 // GET /api/applications/:id/download/resume - Download generated resume
 applications.get('/:id/download/resume', validateUuidParam('id'), async (c) => {

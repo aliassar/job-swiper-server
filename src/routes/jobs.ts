@@ -13,6 +13,7 @@ const jobs = new Hono<AppContext>();
 const reportJobSchema = z.object({
   reason: z.enum(['fake', 'not_interested', 'dont_recommend_company']),
   details: z.string().optional(),
+  blockCompany: z.boolean().optional(),
 });
 
 const acceptJobSchema = z.object({
@@ -278,7 +279,8 @@ jobs.post('/:id/report', validateUuidParam('id'), async (c) => {
     auth.userId,
     jobId,
     validated.data.reason,
-    validated.data.details
+    validated.data.details,
+    validated.data.blockCompany
   );
 
   return c.json(formatResponse(true, report, null, requestId));

@@ -3,18 +3,12 @@ import { pgTable, pgEnum, text, timestamp, boolean, integer, jsonb, uuid, unique
 // Enums
 export const userJobStatusEnum = pgEnum('user_job_status_enum', ['pending', 'accepted', 'rejected', 'skipped']);
 export const applicationStageEnum = pgEnum('application_stage_enum', [
-  'Syncing',
-  'CV Check',
-  'Message Check',
   'Being Applied',
   'Applied',
-  'Interview 1',
-  'Next Interviews',
-  'Offer',
-  'Rejected',
+  'In Review',
   'Accepted',
+  'Rejected',
   'Withdrawn',
-  'Failed',
 ]);
 export const reportReasonEnum = pgEnum('report_reason_enum', ['fake', 'not_interested', 'dont_recommend_company']);
 export const actionTypeEnum = pgEnum('action_type_enum', [

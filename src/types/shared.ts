@@ -8,18 +8,12 @@
  * @sync This enum must match the frontend constants in lib/constants.js
  */
 export const APPLICATION_STAGES = [
-  'Syncing',
-  'CV Check',
-  'Message Check',
   'Being Applied',
   'Applied',
-  'Interview 1',
-  'Next Interviews',
-  'Offer',
-  'Rejected',
+  'In Review',
   'Accepted',
+  'Rejected',
   'Withdrawn',
-  'Failed',
 ] as const;
 
 export type ApplicationStage = typeof APPLICATION_STAGES[number];
