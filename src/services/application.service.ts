@@ -6,6 +6,7 @@ import { logger } from '../middleware/logger';
 import { timerService } from './timer.service';
 import PDFDocument from 'pdfkit';
 import { prepareCaseInsensitiveSearch } from '../lib/utils';
+import { ApplicationStage } from '../types/shared';
 
 export const applicationService = {
   async getApplications(userId: string, page: number = 1, limit: number = 20, search?: string) {
@@ -132,10 +133,11 @@ export const applicationService = {
     return result[0];
   },
 
+
   async updateApplicationStage(
     userId: string,
     applicationId: string,
-    stage: 'Being Applied' | 'Applied' | 'In Review' | 'Accepted' | 'Rejected' | 'Withdrawn'
+    stage: ApplicationStage
   ) {
     const application = await this.getApplicationById(userId, applicationId);
 

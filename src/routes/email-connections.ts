@@ -217,7 +217,7 @@ emailConnections.post('/:id/sync', validateUuidParam('id'), async (c) => {
 
     // Sync to stage updater microservice if configured
     if (process.env.STAGE_UPDATER_SERVICE_URL) {
-      const _syncResult = await emailConnectionService.syncToStageUpdater(connection);
+      await emailConnectionService.syncToStageUpdater(connection);
 
       logger.info({
         userId: auth.userId,
