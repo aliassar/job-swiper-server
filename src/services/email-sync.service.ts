@@ -1,4 +1,4 @@
-import { emailSyncClient } from '../lib/microservice-client';
+import { emailSyncClient } from '../lib/microservice-client.js';
 
 export const emailSyncService = {
   async triggerSync(userId: string, requestId?: string) {

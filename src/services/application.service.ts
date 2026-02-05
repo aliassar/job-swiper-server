@@ -1,12 +1,12 @@
-import { db } from '../lib/db';
-import { applications, jobs, actionHistory, generatedResumes, generatedCoverLetters, workflowRuns } from '../db/schema';
+import { db } from '../lib/db.js';
+import { applications, jobs, actionHistory, generatedResumes, generatedCoverLetters, workflowRuns } from '../db/schema.js';
 import { eq, and, desc, sql, or, SQL, gte, lte, between } from 'drizzle-orm';
-import { NotFoundError } from '../lib/errors';
-import { logger } from '../middleware/logger';
-import { timerService } from './timer.service';
+import { NotFoundError } from '../lib/errors.js';
+import { logger } from '../middleware/logger.js';
+import { timerService } from './timer.service.js';
 import PDFDocument from 'pdfkit';
-import { prepareCaseInsensitiveSearch } from '../lib/utils';
-import { ApplicationStage } from '../types/shared';
+import { prepareCaseInsensitiveSearch } from '../lib/utils.js';
+import { ApplicationStage } from '../types/shared.js';
 
 export const applicationService = {
   async getApplications(userId: string, page: number = 1, limit: number = 20, search?: string) {

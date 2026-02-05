@@ -1,17 +1,17 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { AppContext } from '../types';
-import { formatResponse } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
+import { AppContext } from '../types/index.js';
+import { formatResponse } from '../lib/utils.js';
+import { ValidationError } from '../lib/errors.js';
 import {
   StatusUpdateWebhook,
   GenerationCompleteWebhook,
   ApplicationSubmittedWebhook,
-} from '../lib/microservices';
-import { notificationService } from '../services/notification.service';
-import { applicationService } from '../services/application.service';
-import { db } from '../lib/db';
-import { applications } from '../db/schema';
+} from '../lib/microservices/index.js';
+import { notificationService } from '../services/notification.service.js';
+import { applicationService } from '../services/application.service.js';
+import { db } from '../lib/db.js';
+import { applications } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
 const webhooks = new Hono<AppContext>();

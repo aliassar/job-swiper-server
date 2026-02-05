@@ -1,6 +1,6 @@
 import { Context } from 'hono';
 
-export * from './shared';
+export * from './shared.js';
 
 export interface AuthContext {
   userId: string;

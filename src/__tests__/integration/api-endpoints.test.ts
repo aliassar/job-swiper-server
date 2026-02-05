@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { jobService } from '../../services/job.service';
-import { applicationService } from '../../services/application.service';
+import { jobService } from '../../services/job.service.js';
+import { applicationService } from '../../services/application.service.js';
 
 // Mock the database module
 vi.mock('../../lib/db', () => ({
@@ -455,7 +455,7 @@ describe('API Endpoint Reliability Tests', () => {
           email: 'test@example.com',
         };
 
-        const { authService } = await import('../../services/auth.service');
+        const { authService } = await import('../../services/auth.service.js');
         vi.spyOn(authService, 'register').mockResolvedValue({
           user: mockUser,
           token: 'mock-token',
@@ -475,7 +475,7 @@ describe('API Endpoint Reliability Tests', () => {
           email: 'test@example.com',
         };
 
-        const { authService } = await import('../../services/auth.service');
+        const { authService } = await import('../../services/auth.service.js');
         vi.spyOn(authService, 'login').mockResolvedValue({
           user: mockUser,
           token: 'mock-token',

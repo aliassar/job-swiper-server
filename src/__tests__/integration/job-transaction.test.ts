@@ -35,8 +35,8 @@ vi.mock('../../services/timer.service', () => ({
   },
 }));
 
-import { jobService } from '../../services/job.service';
-import { db } from '../../lib/db';
+import { jobService } from '../../services/job.service.js';
+import { db } from '../../lib/db.js';
 
 /**
  * Integration tests for job service transaction handling

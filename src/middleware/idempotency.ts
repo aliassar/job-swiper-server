@@ -1,9 +1,9 @@
 import { Context, Next } from 'hono';
-import { db } from '../lib/db';
-import { idempotencyKeys } from '../db/schema';
+import { db } from '../lib/db.js';
+import { idempotencyKeys } from '../db/schema.js';
 import { eq, and, gt, lt } from 'drizzle-orm';
-import { AppContext } from '../types';
-import { logger } from './logger';
+import { AppContext } from '../types/index.js';
+import { logger } from './logger.js';
 
 // Idempotency key header name
 const IDEMPOTENCY_KEY_HEADER = 'x-idempotency-key';

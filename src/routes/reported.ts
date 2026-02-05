@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { db } from '../lib/db';
-import { reportedJobs, jobs } from '../db/schema';
-import { formatResponse, parseIntSafe, sanitizeSearchInput, escapeLikePattern } from '../lib/utils';
+import { AppContext } from '../types/index.js';
+import { db } from '../lib/db.js';
+import { reportedJobs, jobs } from '../db/schema.js';
+import { formatResponse, parseIntSafe, sanitizeSearchInput, escapeLikePattern } from '../lib/utils.js';
 import { eq, desc, sql, and, or, like, SQL } from 'drizzle-orm';
 
 const reported = new Hono<AppContext>();

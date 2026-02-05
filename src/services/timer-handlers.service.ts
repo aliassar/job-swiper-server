@@ -1,13 +1,13 @@
-import { db } from '../lib/db';
-import { applications, generatedResumes, generatedCoverLetters, followUpTracking, userSettings, jobs, users } from '../db/schema';
+import { db } from '../lib/db.js';
+import { applications, generatedResumes, generatedCoverLetters, followUpTracking, userSettings, jobs, users } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { logger } from '../middleware/logger';
-import { workflowService } from './workflow.service';
-import { notificationService } from './notification.service';
-import { timerService } from './timer.service';
-import { storage } from '../lib/storage';
-import { extractS3KeyFromUrl, escapeHtml } from '../lib/utils';
-import { emailClient } from '../lib/email-client';
+import { logger } from '../middleware/logger.js';
+import { workflowService } from './workflow.service.js';
+import { notificationService } from './notification.service.js';
+import { timerService } from './timer.service.js';
+import { storage } from '../lib/storage.js';
+import { extractS3KeyFromUrl, escapeHtml } from '../lib/utils.js';
+import { emailClient } from '../lib/email-client.js';
 
 export interface Timer {
   id: string;

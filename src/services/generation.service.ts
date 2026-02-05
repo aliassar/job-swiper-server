@@ -1,9 +1,9 @@
-import { db } from '../lib/db';
-import { generatedResumes, generatedCoverLetters, jobs } from '../db/schema';
-import { resumeAIClient, coverLetterAIClient } from '../lib/microservice-client';
-import { storage } from '../lib/storage';
+import { db } from '../lib/db.js';
+import { generatedResumes, generatedCoverLetters, jobs } from '../db/schema.js';
+import { resumeAIClient, coverLetterAIClient } from '../lib/microservice-client.js';
+import { storage } from '../lib/storage.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { NotFoundError } from '../lib/errors';
+import { NotFoundError } from '../lib/errors.js';
 
 export const generationService = {
   async generateResume(

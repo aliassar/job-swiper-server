@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { scraperService } from '../services/scraper.service';
-import { timerService } from '../services/timer.service';
-import { formatResponse } from '../lib/utils';
+import { AppContext } from '../types/index.js';
+import { scraperService } from '../services/scraper.service.js';
+import { timerService } from '../services/timer.service.js';
+import { formatResponse } from '../lib/utils.js';
 
 const sync = new Hono<AppContext>();
 

@@ -1,7 +1,7 @@
 import { Context, Next } from 'hono';
 import { z } from 'zod';
-import { AppContext } from '../types';
-import { ValidationError } from '../lib/errors';
+import { AppContext } from '../types/index.js';
+import { ValidationError } from '../lib/errors.js';
 
 /**
  * UUID validation schema

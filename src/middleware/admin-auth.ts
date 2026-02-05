@@ -1,7 +1,7 @@
 import { Context, Next } from 'hono';
-import { AppContext } from '../types';
-import { AuthorizationError } from '../lib/errors';
-import { logger } from './logger';
+import { AppContext } from '../types/index.js';
+import { AuthorizationError } from '../lib/errors.js';
+import { logger } from './logger.js';
 import { timingSafeEqual } from 'crypto';
 
 /**

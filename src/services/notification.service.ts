@@ -1,5 +1,5 @@
-import { db } from '../lib/db';
-import { notifications } from '../db/schema';
+import { db } from '../lib/db.js';
+import { notifications } from '../db/schema.js';
 import { eq, desc, and, count } from 'drizzle-orm';
 import { EventEmitter } from 'events';
 

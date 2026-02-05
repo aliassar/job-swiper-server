@@ -1,11 +1,11 @@
-import { stageUpdaterClient } from '../lib/microservice-client';
+import { stageUpdaterClient } from '../lib/microservice-client.js';
 import { 
   StageUpdaterCredentialsRequest, 
   StageUpdaterCredentialsResponse,
   EmailProvider 
-} from '../lib/microservices';
-import { logger } from '../middleware/logger';
-import { ExternalServiceError } from '../lib/errors';
+} from '../lib/microservices/index.js';
+import { logger } from '../middleware/logger.js';
+import { ExternalServiceError } from '../lib/errors.js';
 
 interface TransmissionOptions {
   maxRetries?: number;

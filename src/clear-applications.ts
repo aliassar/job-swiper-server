@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { db } from './lib/db';
-import { applications } from './db/schema';
+import { db } from './lib/db.js';
+import { applications } from './db/schema.js';
 
 async function clearApplications() {
     console.log('Clearing all applications...');

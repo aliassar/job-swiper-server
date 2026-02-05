@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { salaryNormalizationService } from '../services/salary-normalization.service';
-import { formatResponse } from '../lib/utils';
+import { AppContext } from '../types/index.js';
+import { salaryNormalizationService } from '../services/salary-normalization.service.js';
+import { formatResponse } from '../lib/utils.js';
 
 const admin = new Hono<AppContext>();
 

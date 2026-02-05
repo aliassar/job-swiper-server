@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { parseSalaryRange } from '../lib/utils';
+import { parseSalaryRange } from '../lib/utils.js';
 
 // Mock the database module before imports
 vi.mock('../lib/db', () => ({
@@ -20,10 +20,8 @@ vi.mock('../middleware/logger', () => ({
 }));
 
 // Import after mocks are set up
-const { salaryNormalizationService } = await import(
-  '../services/salary-normalization.service'
-);
-const { db } = await import('../lib/db');
+const { salaryNormalizationService } = await import('../services/salary-normalization.service.js');
+const { db } = await import('../lib/db.js');
 
 describe('Salary Normalization Service', () => {
   beforeEach(() => {

@@ -24,7 +24,7 @@ describe('EmailClient', () => {
       process.env.SMTP_PASS = '';
 
       // Import EmailClient after clearing SMTP config
-      const { emailClient } = await import('../lib/email-client');
+      const { emailClient } = await import('../lib/email-client.js');
 
       // Attempt to send email
       await expect(
@@ -48,7 +48,7 @@ describe('EmailClient', () => {
       process.env.FROM_EMAIL = 'noreply@example.com';
 
       // Import EmailClient with SMTP configured
-      const { emailClient } = await import('../lib/email-client');
+      const { emailClient } = await import('../lib/email-client.js');
 
       // Mock the sendEmail method to capture the HTML content
       const sendEmailSpy = vi.spyOn(emailClient, 'sendEmail');
@@ -75,7 +75,7 @@ describe('EmailClient', () => {
       process.env.FROM_EMAIL = 'noreply@example.com';
 
       // Import EmailClient with SMTP configured
-      const { emailClient } = await import('../lib/email-client');
+      const { emailClient } = await import('../lib/email-client.js');
 
       // Mock the sendEmail method to capture the HTML content
       const sendEmailSpy = vi.spyOn(emailClient, 'sendEmail');
@@ -102,7 +102,7 @@ describe('EmailClient', () => {
       process.env.FROM_EMAIL = 'noreply@example.com';
 
       // Import EmailClient with SMTP configured
-      const { emailClient } = await import('../lib/email-client');
+      const { emailClient } = await import('../lib/email-client.js');
 
       // Mock the sendEmail method to capture the HTML content
       const sendEmailSpy = vi.spyOn(emailClient, 'sendEmail');
@@ -129,7 +129,7 @@ describe('EmailClient', () => {
       process.env.FROM_EMAIL = 'noreply@example.com';
 
       // Import EmailClient with SMTP configured
-      const { emailClient } = await import('../lib/email-client');
+      const { emailClient } = await import('../lib/email-client.js');
 
       // Mock the sendEmail method to capture the HTML content
       const sendEmailSpy = vi.spyOn(emailClient, 'sendEmail');

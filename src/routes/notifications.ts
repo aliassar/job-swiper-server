@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
-import { AppContext } from '../types';
-import { notificationService } from '../services/notification.service';
-import { formatResponse, parseIntSafe } from '../lib/utils';
-import { validateUuidParam } from '../middleware/validate-params';
+import { AppContext } from '../types/index.js';
+import { notificationService } from '../services/notification.service.js';
+import { formatResponse, parseIntSafe } from '../lib/utils.js';
+import { validateUuidParam } from '../middleware/validate-params.js';
 
 const notifications = new Hono<AppContext>();
 
@@ -71,7 +71,7 @@ notifications.get('/stream', async (c) => {
     }
 
     try {
-      const { authService } = await import('../services/auth.service');
+      const { authService } = await import('../services/auth.service.js');
       const user = authService.verifyToken(token);
       userId = user.id;
     } catch (error) {

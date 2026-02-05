@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { jobService } from '../../services/job.service';
-import { applicationService } from '../../services/application.service';
+import { jobService } from '../../services/job.service.js';
+import { applicationService } from '../../services/application.service.js';
 
 // Mock the database module
 vi.mock('../../lib/db', () => ({

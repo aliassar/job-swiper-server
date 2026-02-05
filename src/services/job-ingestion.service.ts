@@ -1,5 +1,5 @@
-import { db } from '../lib/db';
-import { jobs } from '../db/schema';
+import { db } from '../lib/db.js';
+import { jobs } from '../db/schema.js';
 
 // Type for job data that can be ingested
 export interface JobIngestionData {

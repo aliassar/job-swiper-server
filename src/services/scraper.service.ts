@@ -1,6 +1,6 @@
-import { db } from '../lib/db';
-import { syncRuns } from '../db/schema';
-import { scraperClient } from '../lib/microservice-client';
+import { db } from '../lib/db.js';
+import { syncRuns } from '../db/schema.js';
+import { scraperClient } from '../lib/microservice-client.js';
 import { desc, eq } from 'drizzle-orm';
 
 export const scraperService = {

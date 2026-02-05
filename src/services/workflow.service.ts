@@ -1,16 +1,16 @@
-import { db } from '../lib/db';
-import { workflowRuns, applications, userSettings, jobs, userProfiles, generatedResumes, generatedCoverLetters, users } from '../db/schema';
+import { db } from '../lib/db.js';
+import { workflowRuns, applications, userSettings, jobs, userProfiles, generatedResumes, generatedCoverLetters, users } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { NotFoundError } from '../lib/errors';
-import { logger } from '../middleware/logger';
-import { timerService } from './timer.service';
-import { applicationService } from './application.service';
-import { generationService } from './generation.service';
-import { resumeService } from './resume.service';
-import { notificationService } from './notification.service';
-import { applicationSenderClient } from '../lib/microservice-client';
-import type { ApplicationSenderRequest, ApplicationSenderResponse, UserProfile } from '../lib/microservices';
-import { extractS3KeyFromUrl } from '../lib/utils';
+import { NotFoundError } from '../lib/errors.js';
+import { logger } from '../middleware/logger.js';
+import { timerService } from './timer.service.js';
+import { applicationService } from './application.service.js';
+import { generationService } from './generation.service.js';
+import { resumeService } from './resume.service.js';
+import { notificationService } from './notification.service.js';
+import { applicationSenderClient } from '../lib/microservice-client.js';
+import type { ApplicationSenderRequest, ApplicationSenderResponse, UserProfile } from '../lib/microservices/index.js';
+import { extractS3KeyFromUrl } from '../lib/utils.js';
 
 export type WorkflowStatus = 'pending' | 'generating_resume' | 'generating_cover_letter' | 'waiting_cv_verification' | 'waiting_message_verification' | 'applying' | 'completed' | 'failed' | 'cancelled';
 
@@ -104,7 +104,7 @@ export const workflowService = {
       // Get base resume URL if configured
       let baseResumeUrl: string | null = null;
       if (settings?.baseResumeId) {
-        const { resumeFiles } = await import('../db/schema');
+        const { resumeFiles } = await import('../db/schema.js');
         const [resume] = await db
           .select()
           .from(resumeFiles)

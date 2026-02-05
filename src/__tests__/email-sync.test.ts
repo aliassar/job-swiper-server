@@ -46,7 +46,7 @@ vi.mock('../lib/encryption', () => ({
   })),
 }));
 
-import { emailConnectionService } from '../services/email-connection.service';
+import { emailConnectionService } from '../services/email-connection.service.js';
 
 describe('Email Connection Sync to Stage Updater', () => {
   beforeEach(() => {

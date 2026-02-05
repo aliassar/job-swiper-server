@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { AppContext } from '../types';
-import { emailConnectionService } from '../services/email-connection.service';
-import { formatResponse } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
-import { validateUuidParam } from '../middleware/validate-params';
-import { logger } from '../middleware/logger';
+import { AppContext } from '../types/index.js';
+import { emailConnectionService } from '../services/email-connection.service.js';
+import { formatResponse } from '../lib/utils.js';
+import { ValidationError } from '../lib/errors.js';
+import { validateUuidParam } from '../middleware/validate-params.js';
+import { logger } from '../middleware/logger.js';
 
 const emailConnections = new Hono<AppContext>();
 

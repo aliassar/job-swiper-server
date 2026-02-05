@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { db } from './lib/db';
-import { users } from './db/schema';
+import { db } from './lib/db.js';
+import { users } from './db/schema.js';
 import bcrypt from 'bcryptjs';
 
 async function createUser() {

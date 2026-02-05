@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { notificationService } from '../../services/notification.service';
+import { notificationService } from '../../services/notification.service.js';
 
 // Mock the database module
 vi.mock('../../lib/db', () => ({

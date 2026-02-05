@@ -1,4 +1,4 @@
-import { ExternalServiceError } from './errors';
+import { ExternalServiceError } from './errors.js';
 
 interface MicroserviceClientOptions {
   baseUrl: string;

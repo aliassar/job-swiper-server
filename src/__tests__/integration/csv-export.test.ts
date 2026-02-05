@@ -35,8 +35,8 @@ vi.mock('../../services/timer.service', () => ({
   },
 }));
 
-import { jobService } from '../../services/job.service';
-import { applicationService } from '../../services/application.service';
+import { jobService } from '../../services/job.service.js';
+import { applicationService } from '../../services/application.service.js';
 
 /**
  * Tests for CSV export handling of special characters

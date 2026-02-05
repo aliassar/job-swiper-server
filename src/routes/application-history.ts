@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { applicationService } from '../services/application.service';
-import { formatResponse, parseIntSafe } from '../lib/utils';
-import { ValidationError, NotFoundError } from '../lib/errors';
-import { db } from '../lib/db';
-import { applications } from '../db/schema';
+import { AppContext } from '../types/index.js';
+import { applicationService } from '../services/application.service.js';
+import { formatResponse, parseIntSafe } from '../lib/utils.js';
+import { ValidationError, NotFoundError } from '../lib/errors.js';
+import { db } from '../lib/db.js';
+import { applications } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 
 const applicationHistory = new Hono<AppContext>();

@@ -1,6 +1,6 @@
 import { neonConfig, Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import * as schema from '../db/schema';
+import * as schema from '../db/schema.js';
 import ws from 'ws';
 
 // Enable WebSocket support for transactions in Node.js environment

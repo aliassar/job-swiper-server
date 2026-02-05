@@ -1,7 +1,7 @@
 import { Context } from 'hono';
-import { AppError } from '../lib/errors';
-import { formatResponse } from '../lib/utils';
-import { logger } from './logger';
+import { AppError } from '../lib/errors.js';
+import { formatResponse } from '../lib/utils.js';
+import { logger } from './logger.js';
 
 export async function errorHandler(err: Error, c: Context) {
   // Log full error details including stack trace

@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { AppContext } from '../types';
-import { db } from '../lib/db';
-import { userSettings } from '../db/schema';
-import { formatResponse } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
+import { AppContext } from '../types/index.js';
+import { db } from '../lib/db.js';
+import { userSettings } from '../db/schema.js';
+import { formatResponse } from '../lib/utils.js';
+import { ValidationError } from '../lib/errors.js';
 import { eq } from 'drizzle-orm';
 
 const settings = new Hono<AppContext>();

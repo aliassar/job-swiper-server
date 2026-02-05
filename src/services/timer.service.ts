@@ -1,8 +1,8 @@
-import { db } from '../lib/db';
-import { scheduledTimers } from '../db/schema';
+import { db } from '../lib/db.js';
+import { scheduledTimers } from '../db/schema.js';
 import { eq, and, lte } from 'drizzle-orm';
-import { timerHandlers } from './timer-handlers.service';
-import { logger } from '../middleware/logger';
+import { timerHandlers } from './timer-handlers.service.js';
+import { logger } from '../middleware/logger.js';
 
 // Module-level flag to prevent concurrent timer processing
 let isProcessing = false;

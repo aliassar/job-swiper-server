@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { logger } from '../middleware/logger';
+import { logger } from '../middleware/logger.js';
 
 const SMTP_HOST = process.env.SMTP_HOST || '';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);

@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { db } from './lib/db';
-import { jobs, jobSources } from './db/schema';
+import { db } from './lib/db.js';
+import { jobs, jobSources } from './db/schema.js';
 import { eq } from 'drizzle-orm';
 
 async function createFakeJobs() {

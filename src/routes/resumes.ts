@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { resumeService } from '../services/resume.service';
-import { formatResponse } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
-import { validateUuidParam } from '../middleware/validate-params';
+import { AppContext } from '../types/index.js';
+import { resumeService } from '../services/resume.service.js';
+import { formatResponse } from '../lib/utils.js';
+import { ValidationError } from '../lib/errors.js';
+import { validateUuidParam } from '../middleware/validate-params.js';
 
 const resumes = new Hono<AppContext>();
 

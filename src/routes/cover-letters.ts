@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { coverLetterService } from '../services/cover-letter.service';
-import { formatResponse } from '../lib/utils';
-import { validateUuidParam } from '../middleware/validate-params';
+import { AppContext } from '../types/index.js';
+import { coverLetterService } from '../services/cover-letter.service.js';
+import { formatResponse } from '../lib/utils.js';
+import { validateUuidParam } from '../middleware/validate-params.js';
 
 const coverLetters = new Hono<AppContext>();
 

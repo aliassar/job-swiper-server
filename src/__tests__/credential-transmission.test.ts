@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { credentialTransmissionService } from '../services/credential-transmission.service';
+import { credentialTransmissionService } from '../services/credential-transmission.service.js';
 
 // Mock the microservice client
 vi.mock('../lib/microservice-client', () => ({
@@ -17,7 +17,7 @@ vi.mock('../middleware/logger', () => ({
   },
 }));
 
-import { stageUpdaterClient } from '../lib/microservice-client';
+import { stageUpdaterClient } from '../lib/microservice-client.js';
 
 describe('Credential Transmission Service', () => {
   beforeEach(() => {

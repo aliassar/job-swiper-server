@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { notificationService } from '../services/notification.service';
+import { notificationService } from '../services/notification.service.js';
 
 // Mock the database module
 vi.mock('../lib/db', () => ({
@@ -121,7 +121,7 @@ describe('Notification EventEmitter Tests', () => {
       );
 
       // Mock database insert to trigger notification
-      const { db } = await import('../lib/db');
+      const { db } = await import('../lib/db.js');
       const mockNotification = {
         id: 'notif-1',
         userId: mockUserId,
@@ -170,7 +170,7 @@ describe('Notification EventEmitter Tests', () => {
       );
 
       // Mock database insert
-      const { db } = await import('../lib/db');
+      const { db } = await import('../lib/db.js');
       const mockNotification = {
         id: 'notif-1',
         userId: mockUserId2,
@@ -215,7 +215,7 @@ describe('Notification EventEmitter Tests', () => {
       unsubscribe();
 
       // Mock database insert
-      const { db } = await import('../lib/db');
+      const { db } = await import('../lib/db.js');
       const mockNotification = {
         id: 'notif-1',
         userId: mockUserId,
