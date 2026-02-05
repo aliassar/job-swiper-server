@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { db } from '../lib/db';
-import { userSettings, resumeFiles, userJobStatus, applications, actionHistory } from '../db/schema';
-import { formatResponse } from '../lib/utils';
+import { AppContext } from '../types/index.js';
+import { db } from '../lib/db.js';
+import { userSettings, resumeFiles, userJobStatus, applications, actionHistory } from '../db/schema.js';
+import { formatResponse } from '../lib/utils.js';
 import { eq } from 'drizzle-orm';
-import { createAuditLog } from '../lib/audit';
+import { createAuditLog } from '../lib/audit.js';
 
 const users = new Hono<AppContext>();
 

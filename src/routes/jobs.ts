@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { AppContext } from '../types';
-import { jobService } from '../services/job.service';
-import { formatResponse, parseIntSafe, sanitizeSearchInput, validateSalaryRange } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
-import { validateUuidParam } from '../middleware/validate-params';
-import { logger } from '../middleware/logger';
+import { AppContext } from '../types/index.js';
+import { jobService } from '../services/job.service.js';
+import { formatResponse, parseIntSafe, sanitizeSearchInput, validateSalaryRange } from '../lib/utils.js';
+import { ValidationError } from '../lib/errors.js';
+import { validateUuidParam } from '../middleware/validate-params.js';
+import { logger } from '../middleware/logger.js';
 
 const jobs = new Hono<AppContext>();
 

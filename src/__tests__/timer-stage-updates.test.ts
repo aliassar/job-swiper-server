@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { timerHandlers } from '../services/timer-handlers.service';
-import { db } from '../lib/db';
-import { workflowService } from '../services/workflow.service';
+import { timerHandlers } from '../services/timer-handlers.service.js';
+import { db } from '../lib/db.js';
+import { workflowService } from '../services/workflow.service.js';
 
 // Mock the database module
 vi.mock('../lib/db', () => ({

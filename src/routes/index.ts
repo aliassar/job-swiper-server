@@ -1,29 +1,29 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { authMiddleware } from '../middleware/auth';
-import { adminAuthMiddleware } from '../middleware/admin-auth';
-import { idempotencyMiddleware } from '../middleware/idempotency';
-import auth from './auth';
-import jobs from './jobs';
-import applications from './applications';
-import saved from './saved';
-import reported from './reported';
-import history from './history';
-import settings from './settings';
-import resumes from './resumes';
-import coverLetters from './cover-letters';
-import generation from './generation';
-import emailSync from './email-sync';
-import users from './users';
-import sync from './sync';
-import notifications from './notifications';
-import webhooks from './webhooks';
-import emailConnections from './email-connections';
-import userProfile from './user-profile';
-import applicationHistory from './application-history';
-import admin from './admin';
-import internal from './internal';
-import blockedCompanies from './blocked-companies';
+import { AppContext } from '../types/index.js';
+import { authMiddleware } from '../middleware/auth.js';
+import { adminAuthMiddleware } from '../middleware/admin-auth.js';
+import { idempotencyMiddleware } from '../middleware/idempotency.js';
+import auth from './auth.js';
+import jobs from './jobs.js';
+import applications from './applications.js';
+import saved from './saved.js';
+import reported from './reported.js';
+import history from './history.js';
+import settings from './settings.js';
+import resumes from './resumes.js';
+import coverLetters from './cover-letters.js';
+import generation from './generation.js';
+import emailSync from './email-sync.js';
+import users from './users.js';
+import sync from './sync.js';
+import notifications from './notifications.js';
+import webhooks from './webhooks.js';
+import emailConnections from './email-connections.js';
+import userProfile from './user-profile.js';
+import applicationHistory from './application-history.js';
+import admin from './admin.js';
+import internal from './internal.js';
+import blockedCompanies from './blocked-companies.js';
 
 const api = new Hono<AppContext>();
 
@@ -106,7 +106,7 @@ api.get('/health', async (c) => {
     HEALTH_CHECK_CACHE_TTL,
     async () => {
       // Perform actual database check
-      const { db } = await import('../lib/db');
+      const { db } = await import('../lib/db.js');
       const { sql } = await import('drizzle-orm');
 
       let dbStatus = 'healthy';
@@ -167,8 +167,8 @@ api.route('/internal', internal);
 // Must be mounted BEFORE auth middleware is applied to /notifications/*
 api.get('/notifications/stream', async (c) => {
   const { stream } = await import('hono/streaming');
-  const { notificationService } = await import('../services/notification.service');
-  const { authService } = await import('../services/auth.service');
+  const { notificationService } = await import('../services/notification.service.js');
+  const { authService } = await import('../services/auth.service.js');
 
   // Get token from query param (EventSource can't send Authorization header)
   const token = c.req.query('token');

@@ -1,5 +1,5 @@
 import { Context, Next } from 'hono';
-import { generateRequestId } from '../lib/utils';
+import { generateRequestId } from '../lib/utils.js';
 
 export async function requestIdMiddleware(c: Context, next: Next) {
   const requestId = c.req.header('X-Request-ID') || generateRequestId();

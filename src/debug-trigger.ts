@@ -5,7 +5,7 @@
  */
 
 import 'dotenv/config';
-import { db } from './lib/db';
+import { db } from './lib/db.js';
 import { sql } from 'drizzle-orm';
 
 async function main() {

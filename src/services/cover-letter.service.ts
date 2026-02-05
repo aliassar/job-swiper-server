@@ -1,7 +1,7 @@
-import { db } from '../lib/db';
-import { generatedCoverLetters, jobs } from '../db/schema';
+import { db } from '../lib/db.js';
+import { generatedCoverLetters, jobs } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { NotFoundError } from '../lib/errors';
+import { NotFoundError } from '../lib/errors.js';
 
 export const coverLetterService = {
   async listCoverLetters(userId: string) {

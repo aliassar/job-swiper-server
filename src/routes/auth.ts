@@ -1,15 +1,15 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { sign, verify } from 'hono/jwt';
-import { AppContext } from '../types';
-import { authService } from '../services/auth.service';
-import { formatResponse } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
-import { authMiddleware } from '../middleware/auth';
-import { db } from '../lib/db';
-import { users } from '../db/schema';
+import { AppContext } from '../types/index.js';
+import { authService } from '../services/auth.service.js';
+import { formatResponse } from '../lib/utils.js';
+import { ValidationError } from '../lib/errors.js';
+import { authMiddleware } from '../middleware/auth.js';
+import { db } from '../lib/db.js';
+import { users } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { logger } from '../middleware/logger';
+import { logger } from '../middleware/logger.js';
 
 const auth = new Hono<AppContext>();
 
@@ -158,7 +158,7 @@ auth.post('/resend-verification', authMiddleware, async (c) => {
     }
 
     // Generate new verification token
-    const { emailVerificationTokens } = await import('../db/schema');
+    const { emailVerificationTokens } = await import('../db/schema.js');
     const crypto = await import('crypto');
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date();
@@ -172,7 +172,7 @@ auth.post('/resend-verification', authMiddleware, async (c) => {
     });
 
     // Send verification email
-    const { emailClient } = await import('../lib/email-client');
+    const { emailClient } = await import('../lib/email-client.js');
     await emailClient.sendVerificationEmail(user.email, verificationToken);
 
     return c.json(

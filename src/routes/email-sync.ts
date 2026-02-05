@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { emailSyncService } from '../services/email-sync.service';
-import { formatResponse } from '../lib/utils';
+import { AppContext } from '../types/index.js';
+import { emailSyncService } from '../services/email-sync.service.js';
+import { formatResponse } from '../lib/utils.js';
 
 const emailSync = new Hono<AppContext>();
 

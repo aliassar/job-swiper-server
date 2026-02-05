@@ -1,11 +1,11 @@
-import { db } from '../lib/db';
-import { emailConnections } from '../db/schema';
+import { db } from '../lib/db.js';
+import { emailConnections } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
-import { NotFoundError } from '../lib/errors';
-import { logger } from '../middleware/logger';
+import { NotFoundError } from '../lib/errors.js';
+import { logger } from '../middleware/logger.js';
 import nodemailer from 'nodemailer';
-import { encryptCredentials, decryptCredentials } from '../lib/encryption';
-import { credentialTransmissionService } from './credential-transmission.service';
+import { encryptCredentials, decryptCredentials } from '../lib/encryption.js';
+import { credentialTransmissionService } from './credential-transmission.service.js';
 
 export type EmailProvider = 'gmail' | 'outlook' | 'yahoo' | 'imap';
 

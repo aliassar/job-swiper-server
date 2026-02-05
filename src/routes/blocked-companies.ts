@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { jobService } from '../services/job.service';
-import { formatResponse } from '../lib/utils';
+import { AppContext } from '../types/index.js';
+import { jobService } from '../services/job.service.js';
+import { formatResponse } from '../lib/utils.js';
 
 const blockedCompanies = new Hono<AppContext>();
 

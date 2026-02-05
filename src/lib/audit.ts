@@ -1,5 +1,5 @@
-import { db } from './db';
-import { auditLogs } from '../db/schema';
+import { db } from './db.js';
+import { auditLogs } from '../db/schema.js';
 
 interface AuditLogData {
   userId?: string;

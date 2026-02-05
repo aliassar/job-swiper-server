@@ -18,7 +18,7 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
 }));
 
 // Import storage after mocks are set up
-import { storage } from '../lib/storage';
+import { storage } from '../lib/storage.js';
 
 describe('Storage S3 Configuration Validation', () => {
   const originalEnv = process.env;

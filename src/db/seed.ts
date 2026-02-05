@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { db } from '../lib/db';
-import { jobSources } from '../db/schema';
+import { db } from '../lib/db.js';
+import { jobSources } from '../db/schema.js';
 
 async function seed() {
   console.log('Seeding database...');

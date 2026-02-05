@@ -1,8 +1,8 @@
-import { db } from '../lib/db';
-import { resumeFiles } from '../db/schema';
+import { db } from '../lib/db.js';
+import { resumeFiles } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { storage } from '../lib/storage';
-import { NotFoundError } from '../lib/errors';
+import { storage } from '../lib/storage.js';
+import { NotFoundError } from '../lib/errors.js';
 
 export const resumeService = {
   async listResumes(userId: string) {

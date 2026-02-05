@@ -1,8 +1,8 @@
 import { Context, Next } from 'hono';
-import { AppContext } from '../types';
-import { AuthenticationError } from '../lib/errors';
-import { authService } from '../services/auth.service';
-import { logger } from './logger';
+import { AppContext } from '../types/index.js';
+import { AuthenticationError } from '../lib/errors.js';
+import { authService } from '../services/auth.service.js';
+import { logger } from './logger.js';
 
 // Authentication middleware with JWT support
 export async function authMiddleware(c: Context<AppContext>, next: Next) {

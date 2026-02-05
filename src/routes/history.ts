@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { AppContext } from '../types';
-import { db } from '../lib/db';
-import { actionHistory, jobs } from '../db/schema';
-import { formatResponse } from '../lib/utils';
+import { AppContext } from '../types/index.js';
+import { db } from '../lib/db.js';
+import { actionHistory, jobs } from '../db/schema.js';
+import { formatResponse } from '../lib/utils.js';
 import { eq, desc } from 'drizzle-orm';
 
 const history = new Hono<AppContext>();

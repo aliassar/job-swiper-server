@@ -5,8 +5,8 @@
  */
 
 import 'dotenv/config';
-import { db } from './lib/db';
-import { jobs } from './db/schema';
+import { db } from './lib/db.js';
+import { jobs } from './db/schema.js';
 import { inArray } from 'drizzle-orm';
 
 const TEST_EXTERNAL_ID_PREFIX = 'dedup-test-';

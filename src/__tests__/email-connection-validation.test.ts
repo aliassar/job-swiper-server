@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { generateEncryptionKey } from '../lib/encryption';
+import { generateEncryptionKey } from '../lib/encryption.js';
 
 describe('Email Connection Validation', () => {
   beforeAll(() => {
