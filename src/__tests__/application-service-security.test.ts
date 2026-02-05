@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { applicationService } from '../services/application.service';
-import { escapeLikePattern } from '../lib/utils';
+import { applicationService } from '../services/application.service.js';
+import { escapeLikePattern } from '../lib/utils.js';
 
 // Mock the database and dependencies
 vi.mock('../lib/db', () => ({
@@ -82,7 +82,7 @@ describe('Application Service - SQL Injection Prevention', () => {
 
   describe('getApplications - search parameter escaping', () => {
     it('should call database methods when search contains special characters', async () => {
-      const { db } = await import('../lib/db');
+      const { db } = await import('../lib/db.js');
       const mockSelect = vi.fn(() => ({
         from: vi.fn(() => ({
           innerJoin: vi.fn(() => ({
@@ -109,7 +109,7 @@ describe('Application Service - SQL Injection Prevention', () => {
     });
 
     it('should handle empty search parameter gracefully', async () => {
-      const { db } = await import('../lib/db');
+      const { db } = await import('../lib/db.js');
       const mockSelect = vi.fn(() => ({
         from: vi.fn(() => ({
           innerJoin: vi.fn(() => ({
@@ -137,7 +137,7 @@ describe('Application Service - SQL Injection Prevention', () => {
 
   describe('getApplicationHistory - search parameter escaping', () => {
     it('should call database methods when search contains special characters', async () => {
-      const { db } = await import('../lib/db');
+      const { db } = await import('../lib/db.js');
       const mockSelect = vi.fn(() => ({
         from: vi.fn(() => ({
           innerJoin: vi.fn(() => ({
@@ -167,7 +167,7 @@ describe('Application Service - SQL Injection Prevention', () => {
     });
 
     it('should handle search with normal text gracefully', async () => {
-      const { db } = await import('../lib/db');
+      const { db } = await import('../lib/db.js');
       const mockSelect = vi.fn(() => ({
         from: vi.fn(() => ({
           innerJoin: vi.fn(() => ({

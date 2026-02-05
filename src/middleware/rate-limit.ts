@@ -1,6 +1,6 @@
 import { Context, Next } from 'hono';
-import { RateLimitError } from '../lib/errors';
-import { logger } from './logger';
+import { RateLimitError } from '../lib/errors.js';
+import { logger } from './logger.js';
 
 /**
  * Simple in-memory rate limiter

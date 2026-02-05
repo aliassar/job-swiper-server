@@ -1,11 +1,11 @@
-import { db } from '../lib/db';
-import { passwordResetTokens, users, emailVerificationTokens } from '../db/schema';
+import { db } from '../lib/db.js';
+import { passwordResetTokens, users, emailVerificationTokens } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
-import { ValidationError, AuthenticationError } from '../lib/errors';
+import { ValidationError, AuthenticationError } from '../lib/errors.js';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { emailClient } from '../lib/email-client';
+import { emailClient } from '../lib/email-client.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';

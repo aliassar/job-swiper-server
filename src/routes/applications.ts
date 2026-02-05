@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { AppContext } from '../types';
-import { applicationService } from '../services/application.service';
-import { formatResponse, parseIntSafe, extractS3KeyFromUrl, sanitizeSearchInput } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
-import { storage } from '../lib/storage';
-import { validateUuidParam } from '../middleware/validate-params';
+import { AppContext } from '../types/index.js';
+import { applicationService } from '../services/application.service.js';
+import { formatResponse, parseIntSafe, extractS3KeyFromUrl, sanitizeSearchInput } from '../lib/utils.js';
+import { ValidationError } from '../lib/errors.js';
+import { storage } from '../lib/storage.js';
+import { validateUuidParam } from '../middleware/validate-params.js';
 
 const applications = new Hono<AppContext>();
 

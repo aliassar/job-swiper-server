@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { AppContext } from '../types';
-import { generationService } from '../services/generation.service';
-import { formatResponse } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
-import { storage } from '../lib/storage';
-import { validateUuidParam } from '../middleware/validate-params';
+import { AppContext } from '../types/index.js';
+import { generationService } from '../services/generation.service.js';
+import { formatResponse } from '../lib/utils.js';
+import { ValidationError } from '../lib/errors.js';
+import { storage } from '../lib/storage.js';
+import { validateUuidParam } from '../middleware/validate-params.js';
 
 const generation = new Hono<AppContext>();
 

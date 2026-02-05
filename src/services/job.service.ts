@@ -1,14 +1,14 @@
-import { db } from '../lib/db';
-import { jobs, userJobStatus, actionHistory, userSettings, applications, blockedCompanies, reportedJobs, workflowRuns } from '../db/schema';
+import { db } from '../lib/db.js';
+import { jobs, userJobStatus, actionHistory, userSettings, applications, blockedCompanies, reportedJobs, workflowRuns } from '../db/schema.js';
 import { eq, and, desc, sql, or, SQL, not } from 'drizzle-orm';
-import { NotFoundError, ValidationError } from '../lib/errors';
-import { logger } from '../middleware/logger';
-import { timerService } from './timer.service';
-import { jobFilterClient } from '../lib/microservice-client';
-import type { JobFilterRequest, JobFilterResponse, FilterType } from '../lib/microservices';
-import type { JobWithStatus } from '../types';
+import { NotFoundError, ValidationError } from '../lib/errors.js';
+import { logger } from '../middleware/logger.js';
+import { timerService } from './timer.service.js';
+import { jobFilterClient } from '../lib/microservice-client.js';
+import type { JobFilterRequest, JobFilterResponse, FilterType } from '../lib/microservices/index.js';
+import type { JobWithStatus } from '../types/index.js';
 import PDFDocument from 'pdfkit';
-import { prepareCaseInsensitiveSearch } from '../lib/utils';
+import { prepareCaseInsensitiveSearch } from '../lib/utils.js';
 
 // Type guard for database errors
 function isDatabaseError(error: unknown): error is { code?: string; constraint?: string } {

@@ -1,13 +1,13 @@
 import 'dotenv/config';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { AppContext } from './types';
-import { requestIdMiddleware } from './middleware/request-id';
-import { loggerMiddleware } from './middleware/logger';
-import { rateLimitMiddleware } from './middleware/rate-limit';
-import { errorHandler } from './middleware/error-handler';
-import api from './routes';
-import { timerService } from './services/timer.service';
+import { AppContext } from './types/index.js';
+import { requestIdMiddleware } from './middleware/request-id.js';
+import { loggerMiddleware } from './middleware/logger.js';
+import { rateLimitMiddleware } from './middleware/rate-limit.js';
+import { errorHandler } from './middleware/error-handler.js';
+import api from './routes/index.js';
+import { timerService } from './services/timer.service.js';
 
 const app = new Hono<AppContext>();
 

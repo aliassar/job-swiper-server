@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { AppContext } from '../types';
-import { db } from '../lib/db';
-import { userProfiles, resumeFiles, userSettings } from '../db/schema';
+import { AppContext } from '../types/index.js';
+import { db } from '../lib/db.js';
+import { userProfiles, resumeFiles, userSettings } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { formatResponse } from '../lib/utils';
-import { ValidationError } from '../lib/errors';
-import { storage } from '../lib/storage';
+import { formatResponse } from '../lib/utils.js';
+import { ValidationError } from '../lib/errors.js';
+import { storage } from '../lib/storage.js';
 
 const userProfile = new Hono<AppContext>();
 

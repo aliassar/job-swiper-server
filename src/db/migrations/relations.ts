@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { users, blockedCompanies, emailVerificationTokens, followUpTracking, applications, notifications, scheduledTimers, userProfiles, workflowRuns, passwordResetTokens, emailConnections, jobSources, jobs, actionHistory, resumeFiles, generatedCoverLetters, generatedResumes, reportedJobs, userJobStatus, userSettings } from "./schema";
+import { users, blockedCompanies, emailVerificationTokens, followUpTracking, applications, notifications, scheduledTimers, userProfiles, workflowRuns, passwordResetTokens, emailConnections, jobSources, jobs, actionHistory, resumeFiles, generatedCoverLetters, generatedResumes, reportedJobs, userJobStatus, userSettings } from './schema.js';
 
 export const blockedCompaniesRelations = relations(blockedCompanies, ({one}) => ({
 	user: one(users, {

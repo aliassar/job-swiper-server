@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { db } from '../lib/db';
-import { userProfiles, resumeFiles, userSettings, jobs } from '../db/schema';
+import { db } from '../lib/db.js';
+import { userProfiles, resumeFiles, userSettings, jobs } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { formatResponse } from '../lib/utils';
+import { formatResponse } from '../lib/utils.js';
 
 const internal = new Hono();
 
@@ -117,7 +117,7 @@ internal.get('/job/:jobId', async (c) => {
  */
 internal.post('/jobs/ingest', async (c) => {
     const requestId = crypto.randomUUID();
-    const { jobIngestionService } = await import('../services/job-ingestion.service');
+    const { jobIngestionService } = await import('../services/job-ingestion.service.js');
 
     let body;
     try {

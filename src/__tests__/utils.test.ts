@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatResponse, generateRequestId, parseIntSafe, parseBoolSafe, parseSalaryRange, escapeLikePattern, sanitizeSearchInput, validateSalaryRange } from '../lib/utils';
+import { formatResponse, generateRequestId, parseIntSafe, parseBoolSafe, parseSalaryRange, escapeLikePattern, sanitizeSearchInput, validateSalaryRange } from '../lib/utils.js';
 
 describe('Utils', () => {
   describe('formatResponse', () => {

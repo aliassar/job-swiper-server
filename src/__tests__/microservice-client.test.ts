@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MicroserviceClient } from '../lib/microservice-client';
-import { ExternalServiceError } from '../lib/errors';
+import { MicroserviceClient } from '../lib/microservice-client.js';
+import { ExternalServiceError } from '../lib/errors.js';
 
 // Mock fetch globally
 const mockFetch = vi.fn();

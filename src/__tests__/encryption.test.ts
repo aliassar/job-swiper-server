@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { encrypt, decrypt, encryptCredentials, decryptCredentials, generateEncryptionKey } from '../lib/encryption';
+import { encrypt, decrypt, encryptCredentials, decryptCredentials, generateEncryptionKey } from '../lib/encryption.js';
 
 describe('Encryption Utilities', () => {
   beforeAll(() => {

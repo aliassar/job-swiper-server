@@ -1,8 +1,8 @@
-import { db } from '../lib/db';
-import { jobs } from '../db/schema';
-import { parseSalaryRange } from '../lib/utils';
+import { db } from '../lib/db.js';
+import { jobs } from '../db/schema.js';
+import { parseSalaryRange } from '../lib/utils.js';
 import { isNotNull, and, or, isNull, eq } from 'drizzle-orm';
-import { logger } from '../middleware/logger';
+import { logger } from '../middleware/logger.js';
 
 /**
  * Service for normalizing salary data in the jobs table
