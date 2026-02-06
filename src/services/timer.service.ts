@@ -87,11 +87,11 @@ export const timerService = {
   },
 
   /**
-   * Schedule CV verification timer (5 minutes auto-confirm)
+   * Schedule CV verification timer (30 seconds auto-confirm - TESTING)
    */
   async scheduleCvVerificationTimer(userId: string, applicationId: string): Promise<string> {
     const executeAt = new Date();
-    executeAt.setMinutes(executeAt.getMinutes() + 5); // 5 minute delay
+    executeAt.setSeconds(executeAt.getSeconds() + 30); // 30 second delay for testing
 
     return this.scheduleTimer({
       userId,
