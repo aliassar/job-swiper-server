@@ -57,8 +57,12 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     port,
     hostname: '0.0.0.0',
   });
+}
 
-  // Start automatic timer processing (polls every 5 seconds)
+// Start automatic timer processing if enabled
+// Set ENABLE_TIMER_PROCESSING=true for long-running servers (Railway, Render, etc.)
+// For serverless (Vercel, Lambda), use external cron to call POST /api/sync/timers
+if (process.env.ENABLE_TIMER_PROCESSING === 'true') {
   console.log('⏰ Starting automatic timer processing...');
   setInterval(async () => {
     try {
@@ -67,6 +71,16 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
       console.error('Error processing timers:', error);
     }
   }, 5000); // Check every 5 seconds
+} else if (process.env.NODE_ENV !== 'production') {
+  // Always enable in development
+  console.log('⏰ Starting automatic timer processing (dev mode)...');
+  setInterval(async () => {
+    try {
+      await timerService.processPendingTimers();
+    } catch (error) {
+      console.error('Error processing timers:', error);
+    }
+  }, 5000);
 }
 
 export default app;
