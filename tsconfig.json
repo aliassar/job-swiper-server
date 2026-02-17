@@ -38,6 +38,8 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "src/debug-trigger.ts",
+    "src/apply-dedup-trigger.ts"
   ]
 }
