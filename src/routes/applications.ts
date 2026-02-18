@@ -235,4 +235,15 @@ applications.put('/:id/documents', validateUuidParam('id'), async (c) => {
   return c.json(formatResponse(true, application, null, requestId));
 });
 
+// DELETE /api/applications/:id - Delete application and revert job to pending
+applications.delete('/:id', validateUuidParam('id'), async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const applicationId = c.req.param('id');
+
+  const result = await applicationService.deleteApplication(auth.userId, applicationId);
+
+  return c.json(formatResponse(true, result, null, requestId));
+});
+
 export default applications;

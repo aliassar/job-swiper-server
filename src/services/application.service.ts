@@ -1,5 +1,5 @@
 import { db } from '../lib/db.js';
-import { applications, jobs, actionHistory, generatedResumes, generatedCoverLetters, workflowRuns } from '../db/schema.js';
+import { applications, jobs, actionHistory, generatedResumes, generatedCoverLetters, workflowRuns, userJobStatus } from '../db/schema.js';
 import { eq, and, desc, sql, or, SQL, gte, lte, between } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors.js';
 import { logger } from '../middleware/logger.js';
@@ -313,6 +313,86 @@ export const applicationService = {
     logger.info({ userId, applicationId }, 'Application rolled back');
 
     return { success: true };
+  },
+
+  /**
+   * Delete an application and revert the job back to pending
+   */
+  async deleteApplication(userId: string, applicationId: string) {
+    const application = await this.getApplicationById(userId, applicationId);
+
+    return await db.transaction(async (tx) => {
+      // Cancel any pending workflow
+      const workflow = await tx
+        .select()
+        .from(workflowRuns)
+        .where(eq(workflowRuns.applicationId, applicationId))
+        .orderBy(desc(workflowRuns.createdAt))
+        .limit(1);
+
+      if (workflow.length > 0 && workflow[0].status !== 'completed' && workflow[0].status !== 'cancelled') {
+        await tx
+          .update(workflowRuns)
+          .set({
+            status: 'cancelled',
+            updatedAt: new Date(),
+          })
+          .where(eq(workflowRuns.id, workflow[0].id));
+      }
+
+      // Cancel all pending timers for this application
+      await timerService.cancelTimersByTarget(applicationId);
+
+      // If documents were generated, schedule deletion timer
+      if (application.generatedResumeId || application.generatedCoverLetterId) {
+        await timerService.scheduleDocDeletionTimer(
+          userId,
+          application.generatedResumeId || '',
+          application.generatedCoverLetterId || undefined
+        );
+      }
+
+      // Delete the application record
+      await tx
+        .delete(applications)
+        .where(eq(applications.id, applicationId));
+
+      // Revert job status back to pending
+      const existing = await tx
+        .select()
+        .from(userJobStatus)
+        .where(
+          and(eq(userJobStatus.userId, userId), eq(userJobStatus.jobId, application.jobId))
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        await tx
+          .update(userJobStatus)
+          .set({
+            status: 'pending',
+            decidedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(eq(userJobStatus.userId, userId), eq(userJobStatus.jobId, application.jobId))
+          );
+      }
+
+      // Record action history
+      await tx.insert(actionHistory).values({
+        userId,
+        jobId: application.jobId,
+        actionType: 'rollback',
+        previousStatus: 'accepted',
+        newStatus: 'pending',
+        metadata: { applicationId, deletedStage: application.stage },
+      });
+
+      logger.info({ userId, applicationId, jobId: application.jobId }, 'Application deleted and job reverted to pending');
+
+      return { success: true };
+    });
   },
 
   /**
