@@ -14,6 +14,11 @@ export const applicationService = {
 
     let whereConditions: SQL<unknown> | undefined = eq(applications.userId, userId);
 
+    // Exclude archived applications unless searching
+    if (!search) {
+      whereConditions = and(whereConditions, eq(applications.isArchived, false));
+    }
+
     if (search) {
       const lowerSearch = prepareCaseInsensitiveSearch(search);
       whereConditions = and(
@@ -36,6 +41,7 @@ export const applicationService = {
         updatedAt: applications.updatedAt,
         customResumeUrl: applications.customResumeUrl,
         customCoverLetterUrl: applications.customCoverLetterUrl,
+        isArchived: applications.isArchived,
         jobId: jobs.id,
         company: jobs.company,
         position: jobs.position,
@@ -61,6 +67,10 @@ export const applicationService = {
       .offset(offset);
 
     let countWhereConditions: SQL<unknown> | undefined = eq(applications.userId, userId);
+
+    if (!search) {
+      countWhereConditions = and(countWhereConditions, eq(applications.isArchived, false));
+    }
 
     if (search) {
       const lowerSearch = prepareCaseInsensitiveSearch(search);
@@ -92,6 +102,7 @@ export const applicationService = {
         updatedAt: item.updatedAt,
         customResumeUrl: item.customResumeUrl,
         customCoverLetterUrl: item.customCoverLetterUrl,
+        isArchived: item.isArchived,
         // Flatten job fields for frontend compatibility
         jobId: item.jobId,
         company: item.company,
@@ -393,6 +404,130 @@ export const applicationService = {
 
       return { success: true };
     });
+  },
+
+  /**
+   * Toggle archive status for an application
+   */
+  async toggleArchive(userId: string, applicationId: string) {
+    const application = await this.getApplicationById(userId, applicationId);
+
+    const newArchived = !application.isArchived;
+
+    await db
+      .update(applications)
+      .set({
+        isArchived: newArchived,
+        updatedAt: new Date(),
+      })
+      .where(eq(applications.id, applicationId));
+
+    logger.info({ userId, applicationId, isArchived: newArchived }, 'Application archive toggled');
+
+    return { success: true, isArchived: newArchived };
+  },
+
+  /**
+   * Get archived applications
+   */
+  async getArchivedApplications(userId: string, page: number = 1, limit: number = 20, search?: string) {
+    const offset = (page - 1) * limit;
+
+    let whereConditions: SQL<unknown> | undefined = and(
+      eq(applications.userId, userId),
+      eq(applications.isArchived, true)
+    );
+
+    if (search) {
+      const lowerSearch = prepareCaseInsensitiveSearch(search);
+      whereConditions = and(
+        whereConditions,
+        or(
+          sql`LOWER(${jobs.company}) LIKE ${`%${lowerSearch}%`}`,
+          sql`LOWER(${jobs.position}) LIKE ${`%${lowerSearch}%`}`
+        )
+      );
+    }
+
+    const items = await db
+      .select({
+        id: applications.id,
+        stage: applications.stage,
+        notes: applications.notes,
+        appliedAt: applications.appliedAt,
+        createdAt: applications.createdAt,
+        lastUpdated: applications.lastUpdated,
+        updatedAt: applications.updatedAt,
+        customResumeUrl: applications.customResumeUrl,
+        customCoverLetterUrl: applications.customCoverLetterUrl,
+        isArchived: applications.isArchived,
+        jobId: jobs.id,
+        company: jobs.company,
+        position: jobs.position,
+        location: jobs.location,
+        salary: jobs.salary,
+        requiredSkills: jobs.requiredSkills,
+        optionalSkills: jobs.optionalSkills,
+        shortDescription: jobs.shortDescription,
+        jobType: jobs.jobType,
+        postedDate: jobs.postedDate,
+        logoUrl: jobs.logoUrl,
+        srcName: jobs.srcName,
+        applyLink: jobs.applyLink,
+        jobUrl: jobs.jobUrl,
+        germanRequirement: jobs.germanRequirement,
+        yearsOfExperience: jobs.yearsOfExperience,
+      })
+      .from(applications)
+      .innerJoin(jobs, eq(jobs.id, applications.jobId))
+      .where(whereConditions)
+      .orderBy(desc(applications.lastUpdated))
+      .limit(limit)
+      .offset(offset);
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(applications)
+      .where(and(eq(applications.userId, userId), eq(applications.isArchived, true)));
+
+    const total = Number(totalResult[0]?.count || 0);
+
+    return {
+      items: items.map((item) => ({
+        id: item.id,
+        stage: item.stage,
+        notes: item.notes,
+        appliedAt: item.appliedAt,
+        createdAt: item.createdAt,
+        lastUpdated: item.lastUpdated,
+        updatedAt: item.updatedAt,
+        customResumeUrl: item.customResumeUrl,
+        customCoverLetterUrl: item.customCoverLetterUrl,
+        isArchived: item.isArchived,
+        jobId: item.jobId,
+        company: item.company,
+        position: item.position,
+        location: item.location,
+        salary: item.salary,
+        requiredSkills: item.requiredSkills,
+        optionalSkills: item.optionalSkills,
+        shortDescription: item.shortDescription,
+        jobType: item.jobType,
+        postedDate: item.postedDate,
+        logoUrl: item.logoUrl,
+        srcName: item.srcName,
+        applyLink: item.applyLink,
+        jobUrl: item.jobUrl,
+        germanRequirement: item.germanRequirement,
+        yearsOfExperience: item.yearsOfExperience,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   },
 
   /**

@@ -265,6 +265,7 @@ export const applications = pgTable('applications', {
   customResumeUrl: text('custom_resume_url'),
   customCoverLetterUrl: text('custom_cover_letter_url'),
   notes: text('notes'),
+  isArchived: boolean('is_archived').notNull().default(false),
   autoUpdateStatus: boolean('auto_update_status').notNull().default(false),
   appliedAt: timestamp('applied_at'),
   lastUpdated: timestamp('last_updated').notNull().defaultNow(),
