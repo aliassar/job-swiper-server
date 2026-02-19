@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { AppContext } from '../types/index.js';
 import { applicationService } from '../services/application.service.js';
+import { workflowService } from '../services/workflow.service.js';
 import { formatResponse, parseIntSafe, extractS3KeyFromUrl, sanitizeSearchInput } from '../lib/utils.js';
 import { ValidationError } from '../lib/errors.js';
 import { storage } from '../lib/storage.js';
@@ -244,6 +245,29 @@ applications.delete('/:id', validateUuidParam('id'), async (c) => {
   const result = await applicationService.deleteApplication(auth.userId, applicationId);
 
   return c.json(formatResponse(true, result, null, requestId));
+});
+
+// POST /api/applications/:id/regenerate - Regenerate resume and cover letter via n8n
+applications.post('/:id/regenerate', validateUuidParam('id'), async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const applicationId = c.req.param('id');
+
+  // Get application to find the jobId
+  const application = await applicationService.getApplicationById(auth.userId, applicationId);
+
+  // Trigger n8n document generation
+  const result = await workflowService.triggerN8nDocumentGeneration(
+    auth.userId,
+    application.jobId,
+    applicationId
+  );
+
+  if (!result.success) {
+    throw new ValidationError(result.error || 'Failed to trigger document generation');
+  }
+
+  return c.json(formatResponse(true, { message: 'Document regeneration triggered' }, null, requestId));
 });
 
 export default applications;
