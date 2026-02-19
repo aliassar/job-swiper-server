@@ -53,6 +53,19 @@ applications.get('/', async (c) => {
   return c.json(formatResponse(true, result, null, requestId));
 });
 
+// GET /api/applications/archived - Get archived applications
+applications.get('/archived', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const page = parseIntSafe(c.req.query('page'), 1);
+  const limit = parseIntSafe(c.req.query('limit'), 20);
+  const search = sanitizeSearchInput(c.req.query('search'));
+
+  const result = await applicationService.getArchivedApplications(auth.userId, page, limit, search);
+
+  return c.json(formatResponse(true, result, null, requestId));
+});
+
 /**
  * GET /api/applications/:id - Get full application details with job and documents
  * 
@@ -268,6 +281,17 @@ applications.post('/:id/regenerate', validateUuidParam('id'), async (c) => {
   }
 
   return c.json(formatResponse(true, { message: 'Document regeneration triggered' }, null, requestId));
+});
+
+// POST /api/applications/:id/archive - Toggle archive status
+applications.post('/:id/archive', validateUuidParam('id'), async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const applicationId = c.req.param('id');
+
+  const result = await applicationService.toggleArchive(auth.userId, applicationId);
+
+  return c.json(formatResponse(true, result, null, requestId));
 });
 
 export default applications;
