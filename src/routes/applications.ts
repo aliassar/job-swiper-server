@@ -266,8 +266,13 @@ applications.post('/:id/regenerate', validateUuidParam('id'), async (c) => {
   const requestId = c.get('requestId');
   const applicationId = c.req.param('id');
 
-  // Get application to find the jobId
+  // Get application to find the jobId and check stage
   const application = await applicationService.getApplicationById(auth.userId, applicationId);
+
+  // Prevent regeneration if documents are currently being generated
+  if (application.stage === 'Being Applied') {
+    throw new ValidationError('Documents are currently being generated. Please wait until the process completes before regenerating.');
+  }
 
   // Trigger n8n document generation
   const result = await workflowService.triggerN8nDocumentGeneration(
