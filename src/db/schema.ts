@@ -9,9 +9,6 @@ export const applicationStageEnum = pgEnum('application_stage_enum', [
   'Accepted',
   'Rejected',
   'Withdrawn',
-  'CV Check',
-  'Message Check',
-  'Failed',
 ]);
 export const reportReasonEnum = pgEnum('report_reason_enum', ['fake', 'not_interested', 'dont_recommend_company']);
 export const actionTypeEnum = pgEnum('action_type_enum', [
