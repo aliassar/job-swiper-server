@@ -1,4 +1,4 @@
-import { db } from '../lib/db.js';
+﻿import { db } from '../lib/db.js';
 import { applications, jobs, actionHistory, generatedResumes, generatedCoverLetters, workflowRuns, userJobStatus } from '../db/schema.js';
 import { eq, and, desc, sql, or, SQL, gte, lte, between } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors.js';
