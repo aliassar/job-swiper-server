@@ -1,6 +1,6 @@
 ﻿import { db } from '../lib/db.js';
 import { applications, jobs, actionHistory, generatedResumes, generatedCoverLetters, workflowRuns, userJobStatus } from '../db/schema.js';
-import { eq, and, desc, sql, or, SQL, gte, lte, between } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, or, SQL, gte, lte, between } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors.js';
 import { logger } from '../middleware/logger.js';
 import { timerService } from './timer.service.js';
@@ -30,41 +30,89 @@ export const applicationService = {
       );
     }
 
-    const items = await db
-      .select({
-        id: applications.id,
-        stage: applications.stage,
-        notes: applications.notes,
-        appliedAt: applications.appliedAt,
-        createdAt: applications.createdAt,
-        lastUpdated: applications.lastUpdated,
-        updatedAt: applications.updatedAt,
-        customResumeUrl: applications.customResumeUrl,
-        customCoverLetterUrl: applications.customCoverLetterUrl,
-        isArchived: applications.isArchived,
-        jobId: jobs.id,
-        company: jobs.company,
-        position: jobs.position,
-        location: jobs.location,
-        salary: jobs.salary,
-        requiredSkills: jobs.requiredSkills,
-        optionalSkills: jobs.optionalSkills,
-        shortDescription: jobs.shortDescription,
-        jobType: jobs.jobType,
-        postedDate: jobs.postedDate,
-        logoUrl: jobs.logoUrl,
-        srcName: jobs.srcName,
-        applyLink: jobs.applyLink,
-        jobUrl: jobs.jobUrl,
-        germanRequirement: jobs.germanRequirement,
-        yearsOfExperience: jobs.yearsOfExperience,
-      })
-      .from(applications)
-      .innerJoin(jobs, eq(jobs.id, applications.jobId))
-      .where(whereConditions)
-      .orderBy(desc(applications.lastUpdated))
-      .limit(limit)
-      .offset(offset);
+    // Sort by name relevance when searching, otherwise by creation time (newest first)
+    if (search) {
+      const lowerSearch = prepareCaseInsensitiveSearch(search);
+      const relevanceOrder = sql`CASE
+        WHEN LOWER(${jobs.company}) = ${lowerSearch} THEN 1
+        WHEN LOWER(${jobs.company}) LIKE ${`${lowerSearch}%`} THEN 2
+        WHEN LOWER(${jobs.position}) = ${lowerSearch} THEN 3
+        WHEN LOWER(${jobs.position}) LIKE ${`${lowerSearch}%`} THEN 4
+        ELSE 5
+      END`;
+
+      var items = await db
+        .select({
+          id: applications.id,
+          stage: applications.stage,
+          notes: applications.notes,
+          appliedAt: applications.appliedAt,
+          createdAt: applications.createdAt,
+          lastUpdated: applications.lastUpdated,
+          updatedAt: applications.updatedAt,
+          customResumeUrl: applications.customResumeUrl,
+          customCoverLetterUrl: applications.customCoverLetterUrl,
+          isArchived: applications.isArchived,
+          jobId: jobs.id,
+          company: jobs.company,
+          position: jobs.position,
+          location: jobs.location,
+          salary: jobs.salary,
+          requiredSkills: jobs.requiredSkills,
+          optionalSkills: jobs.optionalSkills,
+          shortDescription: jobs.shortDescription,
+          jobType: jobs.jobType,
+          postedDate: jobs.postedDate,
+          logoUrl: jobs.logoUrl,
+          srcName: jobs.srcName,
+          applyLink: jobs.applyLink,
+          jobUrl: jobs.jobUrl,
+          germanRequirement: jobs.germanRequirement,
+          yearsOfExperience: jobs.yearsOfExperience,
+        })
+        .from(applications)
+        .innerJoin(jobs, eq(jobs.id, applications.jobId))
+        .where(whereConditions)
+        .orderBy(asc(relevanceOrder), desc(applications.createdAt))
+        .limit(limit)
+        .offset(offset);
+    } else {
+      var items = await db
+        .select({
+          id: applications.id,
+          stage: applications.stage,
+          notes: applications.notes,
+          appliedAt: applications.appliedAt,
+          createdAt: applications.createdAt,
+          lastUpdated: applications.lastUpdated,
+          updatedAt: applications.updatedAt,
+          customResumeUrl: applications.customResumeUrl,
+          customCoverLetterUrl: applications.customCoverLetterUrl,
+          isArchived: applications.isArchived,
+          jobId: jobs.id,
+          company: jobs.company,
+          position: jobs.position,
+          location: jobs.location,
+          salary: jobs.salary,
+          requiredSkills: jobs.requiredSkills,
+          optionalSkills: jobs.optionalSkills,
+          shortDescription: jobs.shortDescription,
+          jobType: jobs.jobType,
+          postedDate: jobs.postedDate,
+          logoUrl: jobs.logoUrl,
+          srcName: jobs.srcName,
+          applyLink: jobs.applyLink,
+          jobUrl: jobs.jobUrl,
+          germanRequirement: jobs.germanRequirement,
+          yearsOfExperience: jobs.yearsOfExperience,
+        })
+        .from(applications)
+        .innerJoin(jobs, eq(jobs.id, applications.jobId))
+        .where(whereConditions)
+        .orderBy(desc(applications.createdAt))
+        .limit(limit)
+        .offset(offset);
+    }
 
     let countWhereConditions: SQL<unknown> | undefined = eq(applications.userId, userId);
 
@@ -481,7 +529,7 @@ export const applicationService = {
       .from(applications)
       .innerJoin(jobs, eq(jobs.id, applications.jobId))
       .where(whereConditions)
-      .orderBy(desc(applications.lastUpdated))
+      .orderBy(desc(applications.createdAt))
       .limit(limit)
       .offset(offset);
 

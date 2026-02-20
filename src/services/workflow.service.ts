@@ -365,8 +365,8 @@ export const workflowService = {
               .set({ generatedResumeId: generatedResume.id })
               .where(eq(applications.id, app.id));
 
-            // Update stage to CV Check
-            await applicationService.updateApplicationStage(userId, app.id, 'CV Check');
+            // Resume generated - keep in Being Applied state
+            await applicationService.updateApplicationStage(userId, app.id, 'Being Applied');
 
             // Notify user
             await notificationService.createNotification(
@@ -387,7 +387,7 @@ export const workflowService = {
         } catch (error) {
           logger.error({ error, workflowRunId }, 'Failed to generate resume');
           await this.updateWorkflowStatus(workflowRunId, 'failed', 'Failed to generate resume');
-          await applicationService.updateApplicationStage(userId, app.id, 'Failed');
+          await applicationService.updateApplicationStage(userId, app.id, 'Rejected');
           await notificationService.createNotification(
             userId,
             'generation_failed',
@@ -415,8 +415,8 @@ export const workflowService = {
             .set({ generatedCoverLetterId: generatedCoverLetter.id })
             .where(eq(applications.id, app.id));
 
-          // Update stage to Message Check
-          await applicationService.updateApplicationStage(userId, app.id, 'Message Check');
+          // Cover letter generated - keep in Being Applied state
+          await applicationService.updateApplicationStage(userId, app.id, 'Being Applied');
 
           // Notify user
           await notificationService.createNotification(
@@ -436,7 +436,7 @@ export const workflowService = {
         } catch (error) {
           logger.error({ error, workflowRunId }, 'Failed to generate cover letter');
           await this.updateWorkflowStatus(workflowRunId, 'failed', 'Failed to generate cover letter');
-          await applicationService.updateApplicationStage(userId, app.id, 'Failed');
+          await applicationService.updateApplicationStage(userId, app.id, 'Rejected');
           await notificationService.createNotification(
             userId,
             'generation_failed',
@@ -562,7 +562,7 @@ export const workflowService = {
         } catch (error) {
           logger.error({ error, workflowRunId, applicationId: app.id }, 'Failed to submit application');
           await this.updateWorkflowStatus(workflowRunId, 'failed', 'Failed to submit application');
-          await applicationService.updateApplicationStage(userId, app.id, 'Failed');
+          await applicationService.updateApplicationStage(userId, app.id, 'Rejected');
           await notificationService.createNotification(
             userId,
             'apply_failed',
