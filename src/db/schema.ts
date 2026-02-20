@@ -268,6 +268,8 @@ export const applications = pgTable('applications', {
   isArchived: boolean('is_archived').notNull().default(false),
   autoUpdateStatus: boolean('auto_update_status').notNull().default(false),
   appliedAt: timestamp('applied_at'),
+  applyClickedAt: timestamp('apply_clicked_at'),
+  applyConfirmed: boolean('apply_confirmed'),
   lastUpdated: timestamp('last_updated').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
