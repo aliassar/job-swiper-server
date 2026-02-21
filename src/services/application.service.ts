@@ -169,6 +169,7 @@ export const applicationService = {
         germanRequirement: item.germanRequirement,
         yearsOfExperience: item.yearsOfExperience,
       })),
+      hasMore: page < Math.ceil(total / limit),
       pagination: {
         page,
         limit,
@@ -569,6 +570,7 @@ export const applicationService = {
         germanRequirement: item.germanRequirement,
         yearsOfExperience: item.yearsOfExperience,
       })),
+      hasMore: page < Math.ceil(total / limit),
       pagination: {
         page,
         limit,
