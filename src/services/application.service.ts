@@ -571,7 +571,7 @@ export const applicationService = {
       .from(applications)
       .innerJoin(jobs, eq(jobs.id, applications.jobId))
       .where(whereConditions)
-      .orderBy(desc(applications.createdAt))
+      .orderBy(desc(applications.updatedAt))
       .limit(limit)
       .offset(offset);
 
@@ -676,7 +676,7 @@ export const applicationService = {
       .from(applications)
       .innerJoin(jobs, eq(jobs.id, applications.jobId))
       .where(whereConditions)
-      .orderBy(desc(applications.createdAt))
+      .orderBy(desc(applications.updatedAt))
       .limit(limit)
       .offset(offset);
 
