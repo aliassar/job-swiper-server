@@ -66,6 +66,19 @@ applications.get('/archived', async (c) => {
   return c.json(formatResponse(true, result, null, requestId));
 });
 
+// GET /api/applications/saved-for-later - Get saved-for-later applications
+applications.get('/saved-for-later', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const page = parseIntSafe(c.req.query('page'), 1);
+  const limit = parseIntSafe(c.req.query('limit'), 20);
+  const search = sanitizeSearchInput(c.req.query('search'));
+
+  const result = await applicationService.getSavedForLaterApplications(auth.userId, page, limit, search);
+
+  return c.json(formatResponse(true, result, null, requestId));
+});
+
 /**
  * GET /api/applications/:id - Get full application details with job and documents
  * 
@@ -290,6 +303,17 @@ applications.post('/:id/archive', validateUuidParam('id'), async (c) => {
   const applicationId = c.req.param('id');
 
   const result = await applicationService.toggleArchive(auth.userId, applicationId);
+
+  return c.json(formatResponse(true, result, null, requestId));
+});
+
+// POST /api/applications/:id/save-for-later - Toggle save-for-later status
+applications.post('/:id/save-for-later', validateUuidParam('id'), async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const applicationId = c.req.param('id');
+
+  const result = await applicationService.toggleSaveForLater(auth.userId, applicationId);
 
   return c.json(formatResponse(true, result, null, requestId));
 });

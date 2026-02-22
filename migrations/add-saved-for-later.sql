@@ -1,0 +1,1 @@
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS is_saved_for_later BOOLEAN NOT NULL DEFAULT false;

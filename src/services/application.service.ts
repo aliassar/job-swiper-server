@@ -14,9 +14,9 @@ export const applicationService = {
 
     let whereConditions: SQL<unknown> | undefined = eq(applications.userId, userId);
 
-    // Exclude archived applications unless searching
+    // Exclude archived and saved-for-later applications unless searching
     if (!search) {
-      whereConditions = and(whereConditions, eq(applications.isArchived, false));
+      whereConditions = and(whereConditions, eq(applications.isArchived, false), eq(applications.isSavedForLater, false));
     }
 
     if (search) {
@@ -117,7 +117,7 @@ export const applicationService = {
     let countWhereConditions: SQL<unknown> | undefined = eq(applications.userId, userId);
 
     if (!search) {
-      countWhereConditions = and(countWhereConditions, eq(applications.isArchived, false));
+      countWhereConditions = and(countWhereConditions, eq(applications.isArchived, false), eq(applications.isSavedForLater, false));
     }
 
     if (search) {
@@ -477,6 +477,27 @@ export const applicationService = {
   },
 
   /**
+   * Toggle save-for-later status for an application
+   */
+  async toggleSaveForLater(userId: string, applicationId: string) {
+    const application = await this.getApplicationById(userId, applicationId);
+
+    const newSaved = !application.isSavedForLater;
+
+    await db
+      .update(applications)
+      .set({
+        isSavedForLater: newSaved,
+        updatedAt: new Date(),
+      })
+      .where(eq(applications.id, applicationId));
+
+    logger.info({ userId, applicationId, isSavedForLater: newSaved }, 'Application save-for-later toggled');
+
+    return { success: true, isSavedForLater: newSaved };
+  },
+
+  /**
    * Get archived applications
    */
   async getArchivedApplications(userId: string, page: number = 1, limit: number = 20, search?: string) {
@@ -553,6 +574,112 @@ export const applicationService = {
         customResumeUrl: item.customResumeUrl,
         customCoverLetterUrl: item.customCoverLetterUrl,
         isArchived: item.isArchived,
+        jobId: item.jobId,
+        company: item.company,
+        position: item.position,
+        location: item.location,
+        salary: item.salary,
+        requiredSkills: item.requiredSkills,
+        optionalSkills: item.optionalSkills,
+        shortDescription: item.shortDescription,
+        jobType: item.jobType,
+        postedDate: item.postedDate,
+        logoUrl: item.logoUrl,
+        srcName: item.srcName,
+        applyLink: item.applyLink,
+        jobUrl: item.jobUrl,
+        germanRequirement: item.germanRequirement,
+        yearsOfExperience: item.yearsOfExperience,
+      })),
+      hasMore: page < Math.ceil(total / limit),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  },
+
+  /**
+   * Get saved-for-later applications
+   */
+  async getSavedForLaterApplications(userId: string, page: number = 1, limit: number = 20, search?: string) {
+    const offset = (page - 1) * limit;
+
+    let whereConditions: SQL<unknown> | undefined = and(
+      eq(applications.userId, userId),
+      eq(applications.isSavedForLater, true)
+    );
+
+    if (search) {
+      const lowerSearch = prepareCaseInsensitiveSearch(search);
+      whereConditions = and(
+        whereConditions,
+        or(
+          sql`LOWER(${jobs.company}) LIKE ${`%${lowerSearch}%`}`,
+          sql`LOWER(${jobs.position}) LIKE ${`%${lowerSearch}%`}`
+        )
+      );
+    }
+
+    const items = await db
+      .select({
+        id: applications.id,
+        stage: applications.stage,
+        notes: applications.notes,
+        appliedAt: applications.appliedAt,
+        createdAt: applications.createdAt,
+        lastUpdated: applications.lastUpdated,
+        updatedAt: applications.updatedAt,
+        customResumeUrl: applications.customResumeUrl,
+        customCoverLetterUrl: applications.customCoverLetterUrl,
+        isArchived: applications.isArchived,
+        isSavedForLater: applications.isSavedForLater,
+        jobId: jobs.id,
+        company: jobs.company,
+        position: jobs.position,
+        location: jobs.location,
+        salary: jobs.salary,
+        requiredSkills: jobs.requiredSkills,
+        optionalSkills: jobs.optionalSkills,
+        shortDescription: jobs.shortDescription,
+        jobType: jobs.jobType,
+        postedDate: jobs.postedDate,
+        logoUrl: jobs.logoUrl,
+        srcName: jobs.srcName,
+        applyLink: jobs.applyLink,
+        jobUrl: jobs.jobUrl,
+        germanRequirement: jobs.germanRequirement,
+        yearsOfExperience: jobs.yearsOfExperience,
+      })
+      .from(applications)
+      .innerJoin(jobs, eq(jobs.id, applications.jobId))
+      .where(whereConditions)
+      .orderBy(desc(applications.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(applications)
+      .where(and(eq(applications.userId, userId), eq(applications.isSavedForLater, true)));
+
+    const total = Number(totalResult[0]?.count || 0);
+
+    return {
+      items: items.map((item) => ({
+        id: item.id,
+        stage: item.stage,
+        notes: item.notes,
+        appliedAt: item.appliedAt,
+        createdAt: item.createdAt,
+        lastUpdated: item.lastUpdated,
+        updatedAt: item.updatedAt,
+        customResumeUrl: item.customResumeUrl,
+        customCoverLetterUrl: item.customCoverLetterUrl,
+        isArchived: item.isArchived,
+        isSavedForLater: item.isSavedForLater,
         jobId: item.jobId,
         company: item.company,
         position: item.position,
