@@ -9,6 +9,26 @@ import { prepareCaseInsensitiveSearch } from '../lib/utils.js';
 import { ApplicationStage } from '../types/shared.js';
 
 export const applicationService = {
+  async getApplicationCounts(userId: string) {
+    const result = await db
+      .select({
+        total: sql<number>`count(*)`,
+        beingApplied: sql<number>`count(*) FILTER (WHERE ${applications.stage} = 'Being Applied' AND ${applications.isArchived} = false AND ${applications.isSavedForLater} = false)`,
+        other: sql<number>`count(*) FILTER (WHERE ${applications.stage} != 'Being Applied' AND ${applications.isArchived} = false AND ${applications.isSavedForLater} = false)`,
+        archived: sql<number>`count(*) FILTER (WHERE ${applications.isArchived} = true)`,
+        savedForLater: sql<number>`count(*) FILTER (WHERE ${applications.isSavedForLater} = true)`,
+      })
+      .from(applications)
+      .where(eq(applications.userId, userId));
+
+    return {
+      beingApplied: Number(result[0]?.beingApplied || 0),
+      other: Number(result[0]?.other || 0),
+      archived: Number(result[0]?.archived || 0),
+      savedForLater: Number(result[0]?.savedForLater || 0),
+    };
+  },
+
   async getApplications(userId: string, page: number = 1, limit: number = 20, search?: string) {
     const offset = (page - 1) * limit;
 
