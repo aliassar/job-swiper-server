@@ -263,6 +263,7 @@ export const applications = pgTable('applications', {
   customCoverLetterUrl: text('custom_cover_letter_url'),
   notes: text('notes'),
   isArchived: boolean('is_archived').notNull().default(false),
+  isSavedForLater: boolean('is_saved_for_later').notNull().default(false),
   autoUpdateStatus: boolean('auto_update_status').notNull().default(false),
   appliedAt: timestamp('applied_at'),
   lastUpdated: timestamp('last_updated').notNull().defaultNow(),
