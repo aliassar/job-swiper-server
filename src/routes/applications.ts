@@ -41,6 +41,16 @@ const updateDocumentsSchema = z.object({
  * 
  * @returns Paginated list of applications
  */
+// GET /api/applications/counts - Get application counts by category
+applications.get('/counts', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+
+  const counts = await applicationService.getApplicationCounts(auth.userId);
+
+  return c.json(formatResponse(true, counts, null, requestId));
+});
+
 applications.get('/', async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
