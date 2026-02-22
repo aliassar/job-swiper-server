@@ -227,6 +227,7 @@ export const applicationService = {
         stage: stage,
         lastUpdated: new Date(),
         updatedAt: new Date(),
+        ...(stage === 'Applied' && { appliedAt: new Date() }),
       })
       .where(eq(applications.id, applicationId));
 
