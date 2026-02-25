@@ -29,7 +29,7 @@ export const applicationService = {
     };
   },
 
-  async getApplications(userId: string, page: number = 1, limit: number = 20, search?: string) {
+  async getApplications(userId: string, page: number = 1, limit: number = 20, search?: string, stage?: string, sort?: string) {
     const offset = (page - 1) * limit;
 
     let whereConditions: SQL<unknown> | undefined = eq(applications.userId, userId);
@@ -37,6 +37,16 @@ export const applicationService = {
     // Exclude archived and saved-for-later applications unless searching
     if (!search) {
       whereConditions = and(whereConditions, eq(applications.isArchived, false), eq(applications.isSavedForLater, false));
+    }
+
+    // Filter by stage if provided
+    if (stage) {
+      if (stage.startsWith('!')) {
+        // Negation: e.g. '!Being Applied' means stage != 'Being Applied'
+        whereConditions = and(whereConditions, sql`${applications.stage} != ${stage.slice(1)}`);
+      } else {
+        whereConditions = and(whereConditions, eq(applications.stage, stage as any));
+      }
     }
 
     if (search) {
@@ -129,7 +139,11 @@ export const applicationService = {
         .from(applications)
         .innerJoin(jobs, eq(jobs.id, applications.jobId))
         .where(whereConditions)
-        .orderBy(desc(applications.createdAt))
+        .orderBy(
+          sort === 'postedDate' ? desc(jobs.postedDate) :
+            sort === 'appliedAt' ? desc(applications.appliedAt) :
+              desc(applications.createdAt)
+        )
         .limit(limit)
         .offset(offset);
     }
