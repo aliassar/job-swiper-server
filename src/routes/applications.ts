@@ -57,8 +57,10 @@ applications.get('/', async (c) => {
   const page = parseIntSafe(c.req.query('page'), 1);
   const limit = parseIntSafe(c.req.query('limit'), 20);
   const search = sanitizeSearchInput(c.req.query('search'));
+  const stage = c.req.query('stage');
+  const sort = c.req.query('sort');
 
-  const result = await applicationService.getApplications(auth.userId, page, limit, search);
+  const result = await applicationService.getApplications(auth.userId, page, limit, search, stage, sort);
 
   return c.json(formatResponse(true, result, null, requestId));
 });
