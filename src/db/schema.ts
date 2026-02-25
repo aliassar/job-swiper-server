@@ -223,6 +223,38 @@ export const jobs = pgTable('jobs', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Duplicate jobs table (for deduplication - stores detected duplicates)
+export const duplicateJobs = pgTable('duplicate_jobs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  originalJobId: uuid('original_job_id').references(() => jobs.id, { onDelete: 'set null' }),
+  sourceId: uuid('source_id').references(() => jobSources.id),
+  externalId: text('external_id'),
+  company: text('company').notNull(),
+  position: text('position').notNull(),
+  location: text('location'),
+  salary: text('salary'),
+  salaryMin: integer('salary_min'),
+  salaryMax: integer('salary_max'),
+  requiredSkills: jsonb('required_skills').notNull().default([]),
+  optionalSkills: jsonb('optional_skills').notNull().default([]),
+  description: text('description'),
+  shortDescription: text('short_description'),
+  requirements: text('requirements'),
+  benefits: text('benefits'),
+  jobType: text('job_type'),
+  experienceLevel: text('experience_level'),
+  jobUrl: text('job_url'),
+  postedDate: timestamp('posted_date'),
+  logoUrl: text('logo_url'),
+  srcName: text('src_name'),
+  applyLink: text('apply_link'),
+  germanRequirement: text('german_requirement'),
+  yearsOfExperience: text('years_of_experience'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  detectedAt: timestamp('detected_at').notNull().defaultNow(),
+});
+
 // User job status table
 export const userJobStatus = pgTable('user_job_status', {
   id: uuid('id').defaultRandom().primaryKey(),
