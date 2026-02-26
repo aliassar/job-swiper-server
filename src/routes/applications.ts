@@ -91,6 +91,112 @@ applications.get('/saved-for-later', async (c) => {
   return c.json(formatResponse(true, result, null, requestId));
 });
 
+// --- Bulk action endpoints ---
+
+const bulkIdsSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(100),
+});
+
+// POST /api/applications/bulk/delete - Bulk delete applications
+applications.post('/bulk/delete', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const body = await c.req.json();
+  const validated = bulkIdsSchema.safeParse(body);
+  if (!validated.success) {
+    throw new ValidationError('Invalid request body', validated.error.errors);
+  }
+
+  const results = await Promise.allSettled(
+    validated.data.ids.map((id) => applicationService.deleteApplication(auth.userId, id))
+  );
+
+  const succeeded: string[] = [];
+  const failed: { id: string; error: string }[] = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') succeeded.push(validated.data.ids[i]);
+    else failed.push({ id: validated.data.ids[i], error: r.reason?.message || 'Unknown error' });
+  });
+
+  return c.json(formatResponse(true, { succeeded, failed }, null, requestId));
+});
+
+// POST /api/applications/bulk/regenerate - Bulk regenerate documents
+applications.post('/bulk/regenerate', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const body = await c.req.json();
+  const validated = bulkIdsSchema.safeParse(body);
+  if (!validated.success) {
+    throw new ValidationError('Invalid request body', validated.error.errors);
+  }
+
+  const results = await Promise.allSettled(
+    validated.data.ids.map(async (id) => {
+      const application = await applicationService.getApplicationById(auth.userId, id);
+      const result = await workflowService.triggerN8nDocumentGeneration(auth.userId, application.jobId, id);
+      if (!result.success) throw new Error(result.error || 'Failed to trigger document generation');
+    })
+  );
+
+  const succeeded: string[] = [];
+  const failed: { id: string; error: string }[] = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') succeeded.push(validated.data.ids[i]);
+    else failed.push({ id: validated.data.ids[i], error: r.reason?.message || 'Unknown error' });
+  });
+
+  return c.json(formatResponse(true, { succeeded, failed }, null, requestId));
+});
+
+// POST /api/applications/bulk/archive - Bulk archive applications
+applications.post('/bulk/archive', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const body = await c.req.json();
+  const validated = bulkIdsSchema.safeParse(body);
+  if (!validated.success) {
+    throw new ValidationError('Invalid request body', validated.error.errors);
+  }
+
+  const results = await Promise.allSettled(
+    validated.data.ids.map((id) => applicationService.toggleArchive(auth.userId, id))
+  );
+
+  const succeeded: string[] = [];
+  const failed: { id: string; error: string }[] = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') succeeded.push(validated.data.ids[i]);
+    else failed.push({ id: validated.data.ids[i], error: r.reason?.message || 'Unknown error' });
+  });
+
+  return c.json(formatResponse(true, { succeeded, failed }, null, requestId));
+});
+
+// POST /api/applications/bulk/save-for-later - Bulk save for later
+applications.post('/bulk/save-for-later', async (c) => {
+  const auth = c.get('auth');
+  const requestId = c.get('requestId');
+  const body = await c.req.json();
+  const validated = bulkIdsSchema.safeParse(body);
+  if (!validated.success) {
+    throw new ValidationError('Invalid request body', validated.error.errors);
+  }
+
+  const results = await Promise.allSettled(
+    validated.data.ids.map((id) => applicationService.toggleSaveForLater(auth.userId, id))
+  );
+
+  const succeeded: string[] = [];
+  const failed: { id: string; error: string }[] = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') succeeded.push(validated.data.ids[i]);
+    else failed.push({ id: validated.data.ids[i], error: r.reason?.message || 'Unknown error' });
+  });
+
+  return c.json(formatResponse(true, { succeeded, failed }, null, requestId));
+});
+
 /**
  * GET /api/applications/:id - Get full application details with job and documents
  * 
