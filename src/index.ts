@@ -16,6 +16,7 @@ app.use('*', cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key', 'X-Idempotency-Key'],
+  exposeHeaders: ['Content-Disposition'],
   credentials: false, // credentials must be false when origin is '*'
 }));
 
