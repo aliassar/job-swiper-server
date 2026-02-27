@@ -4,7 +4,7 @@ import { applicationService } from '../services/application.service.js';
 import { formatResponse, parseIntSafe } from '../lib/utils.js';
 import { ValidationError, NotFoundError } from '../lib/errors.js';
 import { db } from '../lib/db.js';
-import { applications } from '../db/schema.js';
+import { applications, jobs, userProfiles } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 
 const applicationHistory = new Hono<AppContext>();
@@ -112,12 +112,37 @@ applicationHistory.get('/:applicationId/download/:type', async (c) => {
 
   const buffer = await response.arrayBuffer();
 
-  // Extract original filename from the URL, falling back to a generic name
-  const urlPath = new URL(url).pathname;
-  const originalFilename = decodeURIComponent(urlPath.split('/').pop() || '');
-  const filename = originalFilename && originalFilename.includes('.')
-    ? originalFilename
-    : (type === 'resume' ? 'resume.pdf' : 'cover_letter.pdf');
+  // Build filename using user profile name + company name
+  let filename: string;
+  try {
+    // Get user profile for name
+    const [profile] = await db
+      .select({ firstName: userProfiles.firstName, lastName: userProfiles.lastName })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, auth.userId))
+      .limit(1);
+
+    // Get job company name
+    const [job] = await db
+      .select({ company: jobs.company })
+      .from(jobs)
+      .where(eq(jobs.id, app.jobId))
+      .limit(1);
+
+    const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
+    const company = job?.company || '';
+    const docType = type === 'resume' ? 'CV' : 'Cover Letter';
+
+    if (fullName && company) {
+      filename = `${fullName} ${docType} - ${company}.pdf`;
+    } else if (fullName) {
+      filename = `${fullName} ${docType}.pdf`;
+    } else {
+      filename = type === 'resume' ? 'resume.pdf' : 'cover_letter.pdf';
+    }
+  } catch {
+    filename = type === 'resume' ? 'resume.pdf' : 'cover_letter.pdf';
+  }
 
   return new Response(buffer, {
     headers: {
@@ -128,4 +153,3 @@ applicationHistory.get('/:applicationId/download/:type', async (c) => {
 });
 
 export default applicationHistory;
-
