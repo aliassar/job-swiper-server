@@ -111,7 +111,13 @@ applicationHistory.get('/:applicationId/download/:type', async (c) => {
   }
 
   const buffer = await response.arrayBuffer();
-  const filename = type === 'resume' ? 'resume.pdf' : 'cover_letter.pdf';
+
+  // Extract original filename from the URL, falling back to a generic name
+  const urlPath = new URL(url).pathname;
+  const originalFilename = decodeURIComponent(urlPath.split('/').pop() || '');
+  const filename = originalFilename && originalFilename.includes('.')
+    ? originalFilename
+    : (type === 'resume' ? 'resume.pdf' : 'cover_letter.pdf');
 
   return new Response(buffer, {
     headers: {
