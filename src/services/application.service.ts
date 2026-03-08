@@ -262,7 +262,8 @@ export const applicationService = {
         stage: stage,
         lastUpdated: new Date(),
         updatedAt: new Date(),
-        ...(stage === 'Applied' && { appliedAt: new Date() }),
+        // Set appliedAt when transitioning to any stage beyond "Being Applied" if not already set
+        ...(stage !== 'Being Applied' && !application.appliedAt && { appliedAt: new Date() }),
       })
       .where(eq(applications.id, applicationId));
 
