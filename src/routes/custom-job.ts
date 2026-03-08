@@ -58,7 +58,7 @@ customJob.post('/', async (c) => {
             }, 'Custom job webhook call failed');
             return c.json({
                 success: false,
-                error: `Webhook returned ${response.status}`,
+                error: `Webhook returned ${response.status}: ${errorText}`,
                 requestId,
             }, 502);
         }
