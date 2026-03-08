@@ -24,6 +24,7 @@ import applicationHistory from './application-history.js';
 import admin from './admin.js';
 import internal from './internal.js';
 import blockedCompanies from './blocked-companies.js';
+import customJob from './custom-job.js';
 
 const api = new Hono<AppContext>();
 
@@ -265,6 +266,8 @@ api.use('/notifications', authMiddleware);
 api.use('/notifications/*', authMiddleware);
 api.use('/blocked-companies', authMiddleware);
 api.use('/blocked-companies/*', authMiddleware);
+api.use('/custom-job', authMiddleware);
+api.use('/custom-job/*', authMiddleware);
 
 // Mount routes
 api.route('/jobs', jobs);
@@ -283,5 +286,6 @@ api.route('/users', users);
 api.route('/user-profile', userProfile);
 api.route('/notifications', notifications);
 api.route('/blocked-companies', blockedCompanies);
+api.route('/custom-job', customJob);
 
 export default api;
