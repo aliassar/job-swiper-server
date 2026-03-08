@@ -24,7 +24,7 @@ customJob.post('/', async (c) => {
         return c.json({ success: false, error: 'Apply link is required', requestId }, 400);
     }
 
-    const webhookUrl = 'https://primary-production-552d.up.railway.app/webhook-test/custom-job';
+    const webhookUrl = 'https://primary-production-552d.up.railway.app/webhook/custom-job';
     const webhookSecret = process.env.N8N_WEBHOOK_SECRET;
 
     try {
