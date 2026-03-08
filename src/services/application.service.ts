@@ -154,6 +154,15 @@ export const applicationService = {
       countWhereConditions = and(countWhereConditions, eq(applications.isArchived, false), eq(applications.isSavedForLater, false));
     }
 
+    // Apply stage filter to count query (must match the items query)
+    if (stage) {
+      if (stage.startsWith('!')) {
+        countWhereConditions = and(countWhereConditions, sql`${applications.stage} != ${stage.slice(1)}`);
+      } else {
+        countWhereConditions = and(countWhereConditions, eq(applications.stage, stage as any));
+      }
+    }
+
     if (search) {
       const lowerSearch = prepareCaseInsensitiveSearch(search);
       countWhereConditions = and(

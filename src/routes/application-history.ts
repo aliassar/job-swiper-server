@@ -4,7 +4,7 @@ import { applicationService } from '../services/application.service.js';
 import { formatResponse, parseIntSafe } from '../lib/utils.js';
 import { ValidationError, NotFoundError } from '../lib/errors.js';
 import { db } from '../lib/db.js';
-import { applications, jobs, userProfiles } from '../db/schema.js';
+import { applications, jobs, userProfiles, generatedResumes, generatedCoverLetters } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 
 const applicationHistory = new Hono<AppContext>();
@@ -99,12 +99,32 @@ applicationHistory.get('/:applicationId/download/:type', async (c) => {
 
   const url = type === 'resume' ? app.customResumeUrl : app.customCoverLetterUrl;
 
-  if (!url) {
+  // If no custom URL, check generated documents
+  let documentUrl = url;
+  if (!documentUrl) {
+    if (type === 'resume' && app.generatedResumeId) {
+      const [genResume] = await db
+        .select({ fileUrl: generatedResumes.fileUrl })
+        .from(generatedResumes)
+        .where(eq(generatedResumes.id, app.generatedResumeId))
+        .limit(1);
+      documentUrl = genResume?.fileUrl || null;
+    } else if (type === 'cover-letter' && app.generatedCoverLetterId) {
+      const [genCoverLetter] = await db
+        .select({ fileUrl: generatedCoverLetters.fileUrl })
+        .from(generatedCoverLetters)
+        .where(eq(generatedCoverLetters.id, app.generatedCoverLetterId))
+        .limit(1);
+      documentUrl = genCoverLetter?.fileUrl || null;
+    }
+  }
+
+  if (!documentUrl) {
     throw new NotFoundError(`${type === 'resume' ? 'Resume' : 'Cover letter'} not found for this application`);
   }
 
   // Fetch the file from S3/Cloudflare
-  const response = await fetch(url);
+  const response = await fetch(documentUrl);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch document: ${response.status}`);
