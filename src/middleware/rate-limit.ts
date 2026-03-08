@@ -3,57 +3,114 @@ import { RateLimitError } from '../lib/errors.js';
 import { logger } from './logger.js';
 
 /**
- * Simple in-memory rate limiter
+ * Per-endpoint rate limiter with category-based limits
  * 
- * WARNING: This implementation uses in-memory storage which has limitations in serverless environments:
- * - Each serverless function instance maintains its own rate limit state
- * - State is not shared across multiple instances or regions
- * - State is reset when the function instance is terminated
- * - For production use with serverless, consider using a stateless approach or external store like:
- *   - Redis (e.g., Upstash Redis for serverless)
- *   - DynamoDB or similar distributed key-value store
- *   - Edge KV storage (e.g., Cloudflare KV, Vercel KV)
+ * Each route category has its own rate limit, tracked separately per user.
+ * A global per-user limit also applies across all endpoints.
  * 
- * This implementation is suitable for:
- * - Development and testing environments
- * - Single-instance deployments
- * - Basic rate limiting where exact enforcement isn't critical
+ * WARNING: In-memory storage — not shared across serverless instances.
+ * For production, consider Redis/Upstash.
  */
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
-const RATE_LIMIT = parseInt(process.env.RATE_LIMIT_MAX || '100', 10); // requests per window
-const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW || '60000', 10); // default 1 minute
+// --- Configuration ---
+
+interface CategoryConfig {
+  limit: number;     // max requests per window
+  windowMs: number;  // window duration in ms
+}
+
+// Global limit (across all endpoints combined)
+const GLOBAL_LIMIT: CategoryConfig = {
+  limit: parseInt(process.env.RATE_LIMIT_MAX || '300', 10),
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW || '60000', 10),
+};
+
+// Per-category limits (stricter for expensive or sensitive operations)
+const CATEGORY_LIMITS: Record<string, CategoryConfig> = {
+  auth: { limit: 15, windowMs: 60_000 },          // login/register: 15/min
+  applications: { limit: 120, windowMs: 60_000 },  // applications list/filter: 120/min
+  jobs: { limit: 120, windowMs: 60_000 },           // job feed: 120/min
+  webhooks: { limit: 60, windowMs: 60_000 },        // webhooks: 60/min
+  export: { limit: 10, windowMs: 60_000 },          // CSV/PDF exports: 10/min
+  bulk: { limit: 20, windowMs: 60_000 },            // bulk actions: 20/min
+};
+
+// Map path prefixes to categories
+function getCategory(path: string): string | null {
+  if (path.includes('/auth/')) return 'auth';
+  if (path.includes('/bulk/')) return 'bulk';
+  if (path.includes('/export')) return 'export';
+  if (path.includes('/applications')) return 'applications';
+  if (path.includes('/jobs')) return 'jobs';
+  if (path.includes('/webhooks')) return 'webhooks';
+  return null; // no specific category — only global limit applies
+}
+
+// --- Storage ---
+
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+
+// key format: "userId" for global, "userId:category" for per-category
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+function checkLimit(key: string, config: CategoryConfig, now: number): { allowed: boolean; retryAfterSec: number } {
+  const entry = rateLimitStore.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + config.windowMs });
+    return { allowed: true, retryAfterSec: 0 };
+  }
+
+  entry.count++;
+
+  if (entry.count > config.limit) {
+    return { allowed: false, retryAfterSec: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+
+  return { allowed: true, retryAfterSec: 0 };
+}
+
+// --- Middleware ---
 
 export async function rateLimitMiddleware(c: Context, next: Next) {
   const userId = c.get('auth')?.userId || c.req.header('X-Forwarded-For') || 'anonymous';
   const requestId = c.get('requestId') || 'unknown';
+  const path = c.req.path;
   const now = Date.now();
 
-  const userLimit = rateLimitStore.get(userId);
+  // 1. Check per-category limit first (stricter)
+  const category = getCategory(path);
+  if (category && CATEGORY_LIMITS[category]) {
+    const categoryKey = `${userId}:${category}`;
+    const result = checkLimit(categoryKey, CATEGORY_LIMITS[category], now);
 
-  if (!userLimit || now > userLimit.resetAt) {
-    rateLimitStore.set(userId, {
-      count: 1,
-      resetAt: now + WINDOW_MS,
-    });
-  } else {
-    userLimit.count++;
-
-    if (userLimit.count > RATE_LIMIT) {
-      // Log rate limit violation
+    if (!result.allowed) {
       logger.warn({
-        requestId,
-        userId,
-        event: 'rate_limit_exceeded',
-        count: userLimit.count,
-        limit: RATE_LIMIT,
-      }, 'Rate limit exceeded');
-      
-      throw new RateLimitError(`Rate limit exceeded. Try again in ${Math.ceil((userLimit.resetAt - now) / 1000)} seconds`);
+        requestId, userId, category, path,
+        event: 'category_rate_limit_exceeded',
+        limit: CATEGORY_LIMITS[category].limit,
+      }, `Rate limit exceeded for category: ${category}`);
+
+      throw new RateLimitError(`Too many ${category} requests. Try again in ${result.retryAfterSec} seconds`);
     }
   }
 
-  // Clean up old entries periodically
+  // 2. Check global limit
+  const globalResult = checkLimit(userId, GLOBAL_LIMIT, now);
+  if (!globalResult.allowed) {
+    logger.warn({
+      requestId, userId, path,
+      event: 'global_rate_limit_exceeded',
+      limit: GLOBAL_LIMIT.limit,
+    }, 'Global rate limit exceeded');
+
+    throw new RateLimitError(`Rate limit exceeded. Try again in ${globalResult.retryAfterSec} seconds`);
+  }
+
+  // Clean up old entries periodically (~1% of requests)
   if (Math.random() < 0.01) {
     for (const [key, value] of rateLimitStore.entries()) {
       if (now > value.resetAt) {
