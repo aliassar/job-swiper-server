@@ -24,19 +24,23 @@ customJob.post('/', async (c) => {
         return c.json({ success: false, error: 'Apply link is required', requestId }, 400);
     }
 
-    const webhookUrl = 'https://primary-production-552d.up.railway.app/webhook/custom-job';
-    const webhookSecret = process.env.N8N_WEBHOOK_SECRET;
+    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
+    const n8nWebhookSecret = process.env.N8N_WEBHOOK_SECRET;
+
+    if (!n8nWebhookUrl) {
+        return c.json({ success: false, error: 'N8N_WEBHOOK_URL not configured', requestId }, 500);
+    }
 
     try {
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
         };
 
-        if (webhookSecret) {
-            headers['Authorization'] = `Bearer ${webhookSecret}`;
+        if (n8nWebhookSecret) {
+            headers['Authorization'] = `Bearer ${n8nWebhookSecret}`;
         }
 
-        const response = await fetch(webhookUrl, {
+        const response = await fetch(`${n8nWebhookUrl}/custom-job`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
