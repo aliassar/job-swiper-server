@@ -11,12 +11,8 @@
   },
   "crons": [
     {
-      "path": "/api/cron/sync-jobs",
-      "schedule": "0 */2 * * *"
-    },
-    {
       "path": "/api/cron/process-timers",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
