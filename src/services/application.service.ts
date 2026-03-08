@@ -10,11 +10,18 @@ import { ApplicationStage } from '../types/shared.js';
 
 export const applicationService = {
   async getApplicationCounts(userId: string) {
+    const notArchivedNotSaved = sql`${applications.isArchived} = false AND ${applications.isSavedForLater} = false`;
+
     const result = await db
       .select({
         total: sql<number>`count(*)`,
-        beingApplied: sql<number>`count(*) FILTER (WHERE ${applications.stage} = 'Being Applied' AND ${applications.isArchived} = false AND ${applications.isSavedForLater} = false)`,
-        other: sql<number>`count(*) FILTER (WHERE ${applications.stage} != 'Being Applied' AND ${applications.isArchived} = false AND ${applications.isSavedForLater} = false)`,
+        beingApplied: sql<number>`count(*) FILTER (WHERE ${applications.stage} = 'Being Applied' AND ${notArchivedNotSaved})`,
+        other: sql<number>`count(*) FILTER (WHERE ${applications.stage} != 'Being Applied' AND ${notArchivedNotSaved})`,
+        applied: sql<number>`count(*) FILTER (WHERE ${applications.stage} = 'Applied' AND ${notArchivedNotSaved})`,
+        inReview: sql<number>`count(*) FILTER (WHERE ${applications.stage} = 'In Review' AND ${notArchivedNotSaved})`,
+        accepted: sql<number>`count(*) FILTER (WHERE ${applications.stage} = 'Accepted' AND ${notArchivedNotSaved})`,
+        rejected: sql<number>`count(*) FILTER (WHERE ${applications.stage} = 'Rejected' AND ${notArchivedNotSaved})`,
+        withdrawn: sql<number>`count(*) FILTER (WHERE ${applications.stage} = 'Withdrawn' AND ${notArchivedNotSaved})`,
         archived: sql<number>`count(*) FILTER (WHERE ${applications.isArchived} = true)`,
         savedForLater: sql<number>`count(*) FILTER (WHERE ${applications.isSavedForLater} = true)`,
       })
@@ -24,6 +31,11 @@ export const applicationService = {
     return {
       beingApplied: Number(result[0]?.beingApplied || 0),
       other: Number(result[0]?.other || 0),
+      applied: Number(result[0]?.applied || 0),
+      inReview: Number(result[0]?.inReview || 0),
+      accepted: Number(result[0]?.accepted || 0),
+      rejected: Number(result[0]?.rejected || 0),
+      withdrawn: Number(result[0]?.withdrawn || 0),
       archived: Number(result[0]?.archived || 0),
       savedForLater: Number(result[0]?.savedForLater || 0),
     };
