@@ -170,12 +170,17 @@ webhooks.post('/application-submitted', async (c) => {
   console.log('Received application submitted webhook:', data);
 
   if (data.success) {
-    // Update application status to 'Applied' and set appliedAt timestamp
-    await applicationService.updateApplicationStage(data.userId, data.applicationId, 'Applied');
-    await db
-      .update(applications)
-      .set({ appliedAt: new Date(data.submittedAt || new Date().toISOString()) })
-      .where(eq(applications.id, data.applicationId));
+    // Update application status to 'Applied' — this also sets appliedAt if not already set
+    const updatedApp = await applicationService.updateApplicationStage(data.userId, data.applicationId, 'Applied');
+
+    // Only overwrite appliedAt with the webhook's submittedAt if explicitly provided
+    // and the application didn't already have an appliedAt preserved from a prior transition
+    if (data.submittedAt && !updatedApp.appliedAt) {
+      await db
+        .update(applications)
+        .set({ appliedAt: new Date(data.submittedAt) })
+        .where(eq(applications.id, data.applicationId));
+    }
 
     // Create notification
     await notificationService.createNotification(

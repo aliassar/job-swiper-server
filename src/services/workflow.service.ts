@@ -541,10 +541,6 @@ export const workflowService = {
 
             if (response.success) {
               await applicationService.updateApplicationStage(userId, app.id, 'Applied');
-              await db
-                .update(applications)
-                .set({ appliedAt: new Date() })
-                .where(eq(applications.id, app.id));
 
               logger.info({ applicationId: app.id, workflowRunId }, 'Application submitted via microservice');
             } else {
@@ -554,10 +550,6 @@ export const workflowService = {
             // Fallback if microservice not configured - just mark as Applied
             logger.warn({ applicationId: app.id }, 'Application sender microservice not configured, marking as Applied');
             await applicationService.updateApplicationStage(userId, app.id, 'Applied');
-            await db
-              .update(applications)
-              .set({ appliedAt: new Date() })
-              .where(eq(applications.id, app.id));
           }
         } catch (error) {
           logger.error({ error, workflowRunId, applicationId: app.id }, 'Failed to submit application');

@@ -1,4 +1,4 @@
-﻿import { db } from '../lib/db.js';
+import { db } from '../lib/db.js';
 import { applications, jobs, actionHistory, generatedResumes, generatedCoverLetters, workflowRuns, userJobStatus } from '../db/schema.js';
 import { eq, and, desc, asc, sql, or, SQL, gte, lte, between } from 'drizzle-orm';
 import { NotFoundError } from '../lib/errors.js';
@@ -153,7 +153,7 @@ export const applicationService = {
         .where(whereConditions)
         .orderBy(
           sort === 'postedDate' ? desc(jobs.postedDate) :
-            sort === 'appliedAt' ? desc(sql`COALESCE(${applications.appliedAt}, ${applications.createdAt})`) :
+            sort === 'appliedAt' ? desc(applications.appliedAt) :
               desc(applications.createdAt)
         )
         .limit(limit)
