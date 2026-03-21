@@ -85,7 +85,7 @@ export const timerHandlers = {
           .update(applications)
           .set({
             stage: 'Applied',
-            ...(!app.appliedAt && { appliedAt: new Date() }),
+            appliedAt: new Date(),
             lastUpdated: new Date(),
             updatedAt: new Date(),
           })
