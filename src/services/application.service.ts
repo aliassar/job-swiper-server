@@ -153,7 +153,7 @@ export const applicationService = {
         .where(whereConditions)
         .orderBy(
           sort === 'postedDate' ? desc(jobs.postedDate) :
-            sort === 'appliedAt' ? desc(applications.appliedAt) :
+            sort === 'appliedAt' ? sql`${applications.appliedAt} DESC NULLS LAST` :
               desc(applications.createdAt)
         )
         .limit(limit)
