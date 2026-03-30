@@ -15,7 +15,7 @@ const app = new Hono<AppContext>();
 app.use('*', cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key', 'X-Idempotency-Key'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key', 'X-Idempotency-Key', 'Cache-Control'],
   exposeHeaders: ['Content-Disposition'],
   credentials: false, // credentials must be false when origin is '*'
 }));

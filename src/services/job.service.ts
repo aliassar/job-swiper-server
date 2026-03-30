@@ -288,6 +288,14 @@ export const jobService = {
     const currentStatus = job.status ?? 'pending';
     const allowedTransitions = validTransitions[currentStatus] || [];
 
+    // Idempotent: if already in the target state, return current data as-is (no-op)
+    if (currentStatus === status) {
+      return {
+        ...job,
+        status: currentStatus,
+      };
+    }
+
     if (!allowedTransitions.includes(status)) {
       logger.warn({
         userId,
