@@ -80,18 +80,19 @@ export const timerHandlers = {
         // Update workflow status to indicate n8n was triggered
         await workflowService.updateWorkflowStatus(workflowRun.id, 'generating_resume');
 
-        // Update application stage directly to Applied (simplified flow)
+        // Triggering document generation is not the same as having applied, so the
+        // stage stays "Being Applied" and appliedAt is left unset. It becomes
+        // "Applied" when the user confirms (green button / stage dropdown) or when
+        // the application-submitted webhook reports a real submission.
         await db
           .update(applications)
           .set({
-            stage: 'Applied',
-            appliedAt: new Date(),
             lastUpdated: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(applications.id, applicationId));
 
-        console.log('   📄 Application stage updated to Applied');
+        console.log('   📄 Document generation triggered; awaiting apply confirmation');
         console.log('===================================\n');
         logger.info({ applicationId, workflowRunId: workflowRun.id }, 'n8n document generation triggered successfully');
       } else {

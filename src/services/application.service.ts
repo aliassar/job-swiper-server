@@ -262,8 +262,10 @@ export const applicationService = {
         stage: stage,
         lastUpdated: new Date(),
         updatedAt: new Date(),
-        // Always set appliedAt when transitioning to any stage beyond "Being Applied"
-        ...(stage !== 'Being Applied' && { appliedAt: new Date() }),
+        // appliedAt records the moment the status is set to "Applied" — via the
+        // green Applied button or the stage dropdown. Other transitions
+        // (In Review, Rejected, ...) must leave it untouched.
+        ...(stage === 'Applied' && { appliedAt: new Date() }),
       })
       .where(eq(applications.id, applicationId));
 

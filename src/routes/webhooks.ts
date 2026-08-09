@@ -170,12 +170,17 @@ webhooks.post('/application-submitted', async (c) => {
   console.log('Received application submitted webhook:', data);
 
   if (data.success) {
-    // Update application status to 'Applied' — this also sets appliedAt if not already set
-    const updatedApp = await applicationService.updateApplicationStage(data.userId, data.applicationId, 'Applied');
+    // Capture whether a real appliedAt already existed *before* this transition —
+    // updateApplicationStage stamps one itself, so checking after the fact never matches.
+    const existingApp = await applicationService.getApplicationById(data.userId, data.applicationId);
+    const hadAppliedAt = Boolean(existingApp.appliedAt);
 
-    // Only overwrite appliedAt with the webhook's submittedAt if explicitly provided
-    // and the application didn't already have an appliedAt preserved from a prior transition
-    if (data.submittedAt && !updatedApp.appliedAt) {
+    // Update application status to 'Applied' — this also sets appliedAt if not already set
+    await applicationService.updateApplicationStage(data.userId, data.applicationId, 'Applied');
+
+    // The sender's submittedAt is the authoritative submission time, so prefer it
+    // unless the application already carried an appliedAt from a prior transition.
+    if (data.submittedAt && !hadAppliedAt) {
       await db
         .update(applications)
         .set({ appliedAt: new Date(data.submittedAt) })
