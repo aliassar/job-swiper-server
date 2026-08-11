@@ -255,6 +255,28 @@ export const duplicateJobs = pgTable('duplicate_jobs', {
   detectedAt: timestamp('detected_at').notNull().defaultNow(),
 });
 
+// Rejected jobs table - jobs dropped at insert time by the BEFORE INSERT
+// triggers on `jobs`, or by an error during ingestion. Written by the
+// log_rejected_job() SQL function and by the ingestion service, so postings
+// filtered out of the feed can still be reviewed. See migration 0016.
+export const rejectedJobs = pgTable('rejected_jobs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  externalId: text('external_id'),
+  company: text('company'),
+  position: text('position'),
+  location: text('location'),
+  jobUrl: text('job_url'),
+  applyLink: text('apply_link'),
+  srcName: text('src_name'),
+  postedDate: timestamp('posted_date'),
+  // 'duplicate' | 'unknown_company_and_position' | 'absolute_keyword'
+  // | 'optimistic_keyword' | 'insert_error'
+  reason: text('reason').notNull(),
+  reasonDetail: text('reason_detail'),
+  payload: jsonb('payload').notNull(),
+  rejectedAt: timestamp('rejected_at').notNull().defaultNow(),
+});
+
 // User job status table
 export const userJobStatus = pgTable('user_job_status', {
   id: uuid('id').defaultRandom().primaryKey(),

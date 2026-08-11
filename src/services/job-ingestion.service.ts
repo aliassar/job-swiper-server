@@ -1,5 +1,5 @@
 import { db } from '../lib/db.js';
-import { jobs } from '../db/schema.js';
+import { jobs, rejectedJobs } from '../db/schema.js';
 
 // Type for job data that can be ingested
 export interface JobIngestionData {
@@ -30,24 +30,27 @@ export interface JobIngestionData {
 
 export interface IngestionResult {
     inserted: number;
+    rejected: number;
     total: number;
     insertedJobs: { id: string; externalId: string | null; company: string; position: string }[];
 }
 
 /**
  * Ingest multiple jobs into the database.
- * 
- * Deduplication is now handled by a PostgreSQL trigger (prevent_duplicate_jobs).
- * The trigger silently skips duplicate jobs based on:
- * - Same externalId AND
- * - Similar company (word-boundary match) AND  
- * - Similar position (word-boundary match)
- * 
- * Jobs without externalId are always inserted (no duplicate check possible).
+ *
+ * Three BEFORE INSERT triggers on `jobs` can drop a row without raising:
+ * prevent_duplicate_jobs (same externalId + alike company/position),
+ * reject_unknown_jobs (company and position both "Unknown"), and
+ * filter_unwanted_jobs (blocked title keywords). Each one records why in the
+ * `rejected_jobs` table before dropping the row — see migration 0016 — so a
+ * dropped job shows up as an empty `returning()` here, already explained.
+ *
+ * Jobs without externalId skip the duplicate check (nothing to compare on).
  */
 export async function ingestJobs(jobsData: JobIngestionData[]): Promise<IngestionResult> {
     const result: IngestionResult = {
         inserted: 0,
+        rejected: 0,
         total: jobsData.length,
         insertedJobs: [],
     };
@@ -96,18 +99,48 @@ export async function ingestJobs(jobsData: JobIngestionData[]): Promise<Ingestio
                     position: jobs.position,
                 });
 
-            // If the trigger skipped the insert, inserted will be empty
+            // If a trigger dropped the row, inserted is empty. The trigger has
+            // already written the reason to rejected_jobs.
             if (inserted.length > 0) {
                 result.inserted++;
                 result.insertedJobs.push(inserted[0]);
+            } else {
+                result.rejected++;
             }
         } catch (error) {
-            // Log but don't fail the entire batch for single job errors
+            // A raised error aborts the transaction, taking any trigger-written
+            // rejected_jobs row with it, so record the failure from here instead.
+            result.rejected++;
             console.error(`[Job Ingestion] Error inserting job:`, error);
+            await recordInsertError(jobValue, error);
         }
     }
 
     return result;
+}
+
+/**
+ * Record an ingestion failure that no trigger could log for us. Never throws:
+ * losing the audit row must not abort the rest of the batch.
+ */
+async function recordInsertError(jobValue: typeof jobs.$inferInsert, error: unknown): Promise<void> {
+    try {
+        await db.insert(rejectedJobs).values({
+            externalId: jobValue.externalId ?? null,
+            company: jobValue.company,
+            position: jobValue.position,
+            location: jobValue.location ?? null,
+            jobUrl: jobValue.jobUrl ?? null,
+            applyLink: jobValue.applyLink ?? null,
+            srcName: jobValue.srcName ?? null,
+            postedDate: jobValue.postedDate ?? null,
+            reason: 'insert_error',
+            reasonDetail: error instanceof Error ? error.message : String(error),
+            payload: jobValue,
+        });
+    } catch (logError) {
+        console.error('[Job Ingestion] Failed to record rejected job:', logError);
+    }
 }
 
 export const jobIngestionService = {
