@@ -1,7 +1,13 @@
 /**
  * Script to apply the job deduplication functions and trigger directly
- * 
+ *
  * Run with: npx tsx src/apply-dedup-trigger.ts
+ *
+ * SUPERSEDED - do not run this against a database that has migrations 0016 and
+ * 0017 applied. The prevent_duplicate_jobs() below is the old external_id-based
+ * version and would overwrite the content-based dedup from
+ * 0017_content_based_dedup.sql, along with the rejected_jobs logging added in
+ * 0016. Change the trigger there, not here.
  */
 
 import 'dotenv/config';
@@ -27,9 +33,14 @@ async function main() {
             result := input_text;
             result := LOWER(result);
             result := TRIM(result);
-            result := REGEXP_REPLACE(result, '\s+', ' ', 'g');
-            result := REGEXP_REPLACE(result, '\.(com|org|net|io|co|ai|dev|app|xyz|tech|info)\y', '', 'gi');
-            result := REGEXP_REPLACE(result, '\s*(inc\.?|llc\.?|ltd\.?|corp\.?|corporation|company|co\.?|gmbh|ag|plc)\s*$', '', 'gi');
+            -- Backslashes MUST be doubled here. This is a JS template literal, and
+            -- \s \. \y are not valid JS escapes, so a single backslash is dropped
+            -- before Postgres ever sees it. That is how this function shipped as
+            -- REGEXP_REPLACE(result, 's+', ' ', 'g') - replacing the letter "s"
+            -- with a space and stripping no suffix at all ('Siemens' -> 'iemen').
+            result := REGEXP_REPLACE(result, '\\s+', ' ', 'g');
+            result := REGEXP_REPLACE(result, '\\.(com|org|net|io|co|ai|dev|app|xyz|tech|info)\\y', '', 'gi');
+            result := REGEXP_REPLACE(result, '\\s*(inc\\.?|llc\\.?|ltd\\.?|corp\\.?|corporation|company|co\\.?|gmbh|ag|plc)\\s*$', '', 'gi');
             result := TRIM(result);
             
             RETURN result;
