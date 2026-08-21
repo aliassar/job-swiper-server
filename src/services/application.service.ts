@@ -4,6 +4,7 @@ import { eq, and, desc, asc, sql, or, SQL, gte, lte, between } from 'drizzle-orm
 import { NotFoundError } from '../lib/errors.js';
 import { logger } from '../middleware/logger.js';
 import { timerService } from './timer.service.js';
+import { reconcileDocumentPoolInBackground, getDocGenerationMode } from './document-pool.service.js';
 import PDFDocument from 'pdfkit';
 import { prepareCaseInsensitiveSearch } from '../lib/utils.js';
 import { ApplicationStage } from '../types/shared.js';
@@ -280,6 +281,15 @@ export const applicationService = {
         newStage: stage,
       },
     });
+
+    // Leaving "Being Applied" frees a pool slot, so the next-newest application
+    // without documents should start generating. Fire-and-forget: the stage
+    // change must not wait on n8n, and a generation failure must not fail it.
+    // No-op in DOC_GENERATION_MODE=all.
+    if (application.stage === 'Being Applied' && stage !== 'Being Applied'
+        && getDocGenerationMode() === 'top_n') {
+      reconcileDocumentPoolInBackground(userId, `stage:${stage}`);
+    }
 
     return await this.getApplicationById(userId, applicationId);
   },

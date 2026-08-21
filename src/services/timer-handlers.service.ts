@@ -5,6 +5,7 @@ import { logger } from '../middleware/logger.js';
 import { workflowService } from './workflow.service.js';
 import { notificationService } from './notification.service.js';
 import { timerService } from './timer.service.js';
+import { reconcileDocumentPool, getDocGenerationMode } from './document-pool.service.js';
 import { storage } from '../lib/storage.js';
 import { extractS3KeyFromUrl, escapeHtml } from '../lib/utils.js';
 import { emailClient } from '../lib/email-client.js';
@@ -48,6 +49,21 @@ export const timerHandlers = {
 
       const app = application[0];
       console.log(`   Job ID: ${app.jobId}`);
+
+      // In top_n mode this accept does not generate documents for itself.
+      // Instead the pool is reconciled: the newest N applications still in
+      // "Being Applied" are kept supplied, so this job is generated only if the
+      // accept put it inside that window. Set DOC_GENERATION_MODE=all to revert
+      // to generating for every accepted job.
+      if (getDocGenerationMode() === 'top_n') {
+        const { triggered, skipped } = await reconcileDocumentPool(timer.userId, 'accept');
+        console.log(`   📄 Pool reconciled: ${triggered.length} triggered, ${skipped} already in flight`);
+        logger.info(
+          { userId: timer.userId, applicationId, triggered: triggered.length, skipped },
+          'Document pool reconciled after accept'
+        );
+        return;
+      }
 
       // Check if there's a workflow run for this application
       const workflowRun = await workflowService.getWorkflowByApplication(applicationId);
