@@ -32,24 +32,28 @@ export function getDocPoolSize(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
 }
 
-// A workflow in one of these states is already producing documents, so
-// re-triggering would duplicate the n8n run.
-const IN_FLIGHT_STATUSES = new Set([
-  'pending',
-  'generating_resume',
-  'generating_cover_letter',
-  'waiting_cv_verification',
-  'waiting_message_verification',
-  'applying',
-]);
+// 'pending' means the workflow row was created by acceptJob but n8n has not
+// been called yet - that is precisely the state we are here to act on. Every
+// other status means an attempt has already been made, so we leave it alone.
+// Documents are never regenerated automatically: once anything has been
+// produced, or even attempted, only the user's manual Regenerate button
+// touches it again. That also stops a permanently failing job from being
+// retried on every accept and every apply.
+const TRIGGERABLE_STATUS = 'pending';
 
 export interface PoolEntry {
   applicationId: string;
   jobId: string;
   company: string;
   position: string;
-  postedDate: Date | null;
-  hasDocuments: boolean;
+  /** posted_date where the ad carries one, else when the job was scraped. */
+  rankedAt: Date | null;
+  /**
+   * True if ANY document artifact exists - generated or user-uploaded, resume
+   * or cover letter. Deliberately "any", not "both": a half-finished
+   * application must not be re-triggered, because n8n regenerates both.
+   */
+  hasAnyDocument: boolean;
 }
 
 /**
@@ -62,7 +66,7 @@ export async function getDocumentPool(userId: string, size = getDocPoolSize()): 
       jobId: applications.jobId,
       company: jobs.company,
       position: jobs.position,
-      postedDate: jobs.postedDate,
+      rankedAt: sql<Date | null>`coalesce(${jobs.postedDate}, ${jobs.createdAt})`,
       generatedResumeId: applications.generatedResumeId,
       generatedCoverLetterId: applications.generatedCoverLetterId,
       customResumeUrl: applications.customResumeUrl,
@@ -78,8 +82,9 @@ export async function getDocumentPool(userId: string, size = getDocPoolSize()): 
         eq(applications.isSavedForLater, false)
       )
     )
-    // Ads with no posted_date sort last rather than being treated as newest.
-    .orderBy(sql`${jobs.postedDate} DESC NULLS LAST`)
+    // Rank by when the ad went live; where the source gave no posted_date, fall
+    // back to when we scraped it rather than sorting those rows to the end.
+    .orderBy(sql`coalesce(${jobs.postedDate}, ${jobs.createdAt}) DESC`)
     .limit(size);
 
   return rows.map((r) => ({
@@ -87,10 +92,10 @@ export async function getDocumentPool(userId: string, size = getDocPoolSize()): 
     jobId: r.jobId,
     company: r.company,
     position: r.position,
-    postedDate: r.postedDate,
-    hasDocuments: Boolean(
-      (r.generatedResumeId || r.customResumeUrl) &&
-      (r.generatedCoverLetterId || r.customCoverLetterUrl)
+    rankedAt: r.rankedAt,
+    hasAnyDocument: Boolean(
+      r.generatedResumeId || r.customResumeUrl ||
+      r.generatedCoverLetterId || r.customCoverLetterUrl
     ),
   }));
 }
@@ -112,17 +117,17 @@ export async function reconcileDocumentPool(
 
   try {
     const pool = await getDocumentPool(userId);
-    const missing = pool.filter((entry) => !entry.hasDocuments);
+    // Anything already carrying a document is finished as far as this service
+    // is concerned - only the manual Regenerate button may replace it.
+    const missing = pool.filter((entry) => !entry.hasAnyDocument);
 
     for (const entry of missing) {
       const existing = await workflowService.getWorkflowByApplication(entry.applicationId);
 
-      if (existing && IN_FLIGHT_STATUSES.has(existing.status)) {
-        skipped++;
-        continue;
-      }
-      if (existing && existing.status === 'cancelled') {
-        // Rolled back deliberately - do not resurrect it.
+      // Any status other than 'pending' means generation was already attempted
+      // for this application: in flight, completed, failed, or cancelled. None
+      // of those may be re-triggered automatically.
+      if (existing && existing.status !== TRIGGERABLE_STATUS) {
         skipped++;
         continue;
       }
