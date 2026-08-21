@@ -15,6 +15,28 @@ function isDatabaseError(error: unknown): error is { code?: string; constraint?:
   return typeof error === 'object' && error !== null && ('code' in error || 'constraint' in error);
 }
 
+/**
+ * Austrian and Swiss locations to keep out of the swipe feed.
+ *
+ * One alternation rather than one predicate per city: the blocked-company
+ * clause showed what 70+ separate predicates cost on a seq scan, and this way
+ * each row is tested once.
+ *
+ * \m...\M word boundaries are essential, not cosmetic. Plain substring matching
+ * catches German cities - "Lan(genf)eld" and "Eg(genf)elden" contain genf,
+ * while "Na(bern)", "(Bern)au", "Ko(bern)-Gondorf", "Wa(bern)", "(Bern)burg"
+ * and "O(bern)dorf" contain bern - roughly 30 German jobs wrongly excluded.
+ * With boundaries, 458 jobs across 25 locations match and none of them carry a
+ * German location label.
+ *
+ * Jobs filtered here are still stored and still reachable elsewhere; this only
+ * hides them from the feed.
+ */
+const EXCLUDED_LOCATION_PATTERN =
+  '\\m(wien|vienna|austria|österreich|oesterreich|graz|salzburg|linz|innsbruck|klagenfurt' +
+  '|switzerland|schweiz|zentralschweiz|suisse|svizzera|zürich|zurich|basel|bern|genf' +
+  '|geneva|genève|lausanne|luzern|lucerne|lugano|winterthur|st\\. gallen)\\M';
+
 export const jobService = {
   /**
    * Get pending jobs for a user with optional filters
@@ -98,6 +120,12 @@ export const jobService = {
       conditions.push(not(or(...blockedConditions)!));
     }
 
+    // Hide Austrian and Swiss postings from the feed. NULL locations are kept:
+    // an unknown location should not be treated as a match.
+    conditions.push(
+      sql`(${jobs.location} IS NULL OR ${jobs.location} !~* ${EXCLUDED_LOCATION_PATTERN})`
+    );
+
     // Add search if provided (case-insensitive)
     if (search) {
       const lowerSearch = prepareCaseInsensitiveSearch(search);
@@ -145,6 +173,11 @@ export const jobService = {
       );
       countConditions.push(not(or(...blockedConditions)!));
     }
+
+    // Must stay identical to the page query's location clause above.
+    countConditions.push(
+      sql`(${jobs.location} IS NULL OR ${jobs.location} !~* ${EXCLUDED_LOCATION_PATTERN})`
+    );
 
     if (search) {
       const lowerSearch = prepareCaseInsensitiveSearch(search);
