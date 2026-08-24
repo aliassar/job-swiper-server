@@ -7,6 +7,7 @@ import { timerService } from './timer.service.js';
 import { reconcileDocumentPoolInBackground, getDocGenerationMode } from './document-pool.service.js';
 import PDFDocument from 'pdfkit';
 import { prepareCaseInsensitiveSearch } from '../lib/utils.js';
+import { deriveGenerationState } from '../lib/generation-state.js';
 import { ApplicationStage } from '../types/shared.js';
 
 export const applicationService = {
@@ -95,7 +96,14 @@ export const applicationService = {
           updatedAt: applications.updatedAt,
           customResumeUrl: applications.customResumeUrl,
           customCoverLetterUrl: applications.customCoverLetterUrl,
+          generatedResumeId: applications.generatedResumeId,
+          generatedCoverLetterId: applications.generatedCoverLetterId,
           isArchived: applications.isArchived,
+          // At most one workflow run per application (idempotencyKey is unique
+          // on user+application), so a plain left join is safe here.
+          workflowStatus: workflowRuns.status,
+          workflowUpdatedAt: workflowRuns.updatedAt,
+          workflowMetadata: workflowRuns.metadata,
           jobId: jobs.id,
           company: jobs.company,
           position: jobs.position,
@@ -115,6 +123,7 @@ export const applicationService = {
         })
         .from(applications)
         .innerJoin(jobs, eq(jobs.id, applications.jobId))
+        .leftJoin(workflowRuns, eq(workflowRuns.applicationId, applications.id))
         .where(whereConditions)
         .orderBy(asc(relevanceOrder), desc(applications.createdAt))
         .limit(limit)
@@ -131,7 +140,14 @@ export const applicationService = {
           updatedAt: applications.updatedAt,
           customResumeUrl: applications.customResumeUrl,
           customCoverLetterUrl: applications.customCoverLetterUrl,
+          generatedResumeId: applications.generatedResumeId,
+          generatedCoverLetterId: applications.generatedCoverLetterId,
           isArchived: applications.isArchived,
+          // At most one workflow run per application (idempotencyKey is unique
+          // on user+application), so a plain left join is safe here.
+          workflowStatus: workflowRuns.status,
+          workflowUpdatedAt: workflowRuns.updatedAt,
+          workflowMetadata: workflowRuns.metadata,
           jobId: jobs.id,
           company: jobs.company,
           position: jobs.position,
@@ -151,6 +167,7 @@ export const applicationService = {
         })
         .from(applications)
         .innerJoin(jobs, eq(jobs.id, applications.jobId))
+        .leftJoin(workflowRuns, eq(workflowRuns.applicationId, applications.id))
         .where(whereConditions)
         .orderBy(
           sort === 'postedDate' ? desc(jobs.postedDate) :
@@ -207,6 +224,16 @@ export const applicationService = {
         customResumeUrl: item.customResumeUrl,
         customCoverLetterUrl: item.customCoverLetterUrl,
         isArchived: item.isArchived,
+        // What the UI should render for the Resume / Cover Letter buttons.
+        // startedAt travels with it so the client can flip a stalled
+        // "Generating..." to failed without waiting for a refetch.
+        generation: deriveGenerationState({
+          hasResume: Boolean(item.customResumeUrl || item.generatedResumeId),
+          hasCoverLetter: Boolean(item.customCoverLetterUrl || item.generatedCoverLetterId),
+          workflowStatus: item.workflowStatus,
+          workflowUpdatedAt: item.workflowUpdatedAt,
+          workflowError: (item.workflowMetadata as { error?: string } | null)?.error ?? null,
+        }),
         // Flatten job fields for frontend compatibility
         jobId: item.jobId,
         company: item.company,
