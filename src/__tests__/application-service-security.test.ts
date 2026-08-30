@@ -2,23 +2,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { applicationService } from '../services/application.service.js';
 import { escapeLikePattern } from '../lib/utils.js';
 
+/**
+ * A query-builder stub that answers any chained method with itself and resolves
+ * to `rows` when awaited. The previous mocks spelled out one exact chain, so
+ * adding a join to a query broke them even though the behaviour under test -
+ * how the search term is escaped - had not changed.
+ */
+function chainable(rows: unknown[] = []): any {
+  const target: any = new Proxy(function () {} as any, {
+    get(_t, prop) {
+      if (prop === 'then') {
+        const promise = Promise.resolve(rows);
+        return promise.then.bind(promise);
+      }
+      return vi.fn(() => target);
+    },
+    apply() {
+      return target;
+    },
+  });
+  return target;
+}
+
 // Mock the database and dependencies
 vi.mock('../lib/db', () => ({
   db: {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        innerJoin: vi.fn(() => ({
-          where: vi.fn(() => ({
-            orderBy: vi.fn(() => ({
-              limit: vi.fn(() => ({
-                offset: vi.fn(() => Promise.resolve([])),
-              })),
-            })),
-          })),
-        })),
-        where: vi.fn(() => Promise.resolve([{ count: 0 }])),
-      })),
-    })),
+    select: vi.fn(() => chainable([])),
   },
 }));
 
@@ -83,20 +92,7 @@ describe('Application Service - SQL Injection Prevention', () => {
   describe('getApplications - search parameter escaping', () => {
     it('should call database methods when search contains special characters', async () => {
       const { db } = await import('../lib/db.js');
-      const mockSelect = vi.fn(() => ({
-        from: vi.fn(() => ({
-          innerJoin: vi.fn(() => ({
-            where: vi.fn(() => ({
-              orderBy: vi.fn(() => ({
-                limit: vi.fn(() => ({
-                  offset: vi.fn(() => Promise.resolve([])),
-                })),
-              })),
-            })),
-          })),
-          where: vi.fn(() => Promise.resolve([{ count: 0 }])),
-        })),
-      }));
+      const mockSelect = vi.fn(() => chainable([]));
       (db.select as any) = mockSelect;
 
       const userId = 'test-user-id';
@@ -110,20 +106,7 @@ describe('Application Service - SQL Injection Prevention', () => {
 
     it('should handle empty search parameter gracefully', async () => {
       const { db } = await import('../lib/db.js');
-      const mockSelect = vi.fn(() => ({
-        from: vi.fn(() => ({
-          innerJoin: vi.fn(() => ({
-            where: vi.fn(() => ({
-              orderBy: vi.fn(() => ({
-                limit: vi.fn(() => ({
-                  offset: vi.fn(() => Promise.resolve([])),
-                })),
-              })),
-            })),
-          })),
-          where: vi.fn(() => Promise.resolve([{ count: 0 }])),
-        })),
-      }));
+      const mockSelect = vi.fn(() => chainable([]));
       (db.select as any) = mockSelect;
 
       const userId = 'test-user-id';
@@ -138,19 +121,7 @@ describe('Application Service - SQL Injection Prevention', () => {
   describe('getApplicationHistory - search parameter escaping', () => {
     it('should call database methods when search contains special characters', async () => {
       const { db } = await import('../lib/db.js');
-      const mockSelect = vi.fn(() => ({
-        from: vi.fn(() => ({
-          innerJoin: vi.fn(() => ({
-            where: vi.fn(() => ({
-              orderBy: vi.fn(() => ({
-                limit: vi.fn(() => ({
-                  offset: vi.fn(() => Promise.resolve([])),
-                })),
-              })),
-            })),
-          })),
-        })),
-      }));
+      const mockSelect = vi.fn(() => chainable([]));
       (db.select as any) = mockSelect;
 
       const userId = 'test-user-id';
@@ -168,19 +139,7 @@ describe('Application Service - SQL Injection Prevention', () => {
 
     it('should handle search with normal text gracefully', async () => {
       const { db } = await import('../lib/db.js');
-      const mockSelect = vi.fn(() => ({
-        from: vi.fn(() => ({
-          innerJoin: vi.fn(() => ({
-            where: vi.fn(() => ({
-              orderBy: vi.fn(() => ({
-                limit: vi.fn(() => ({
-                  offset: vi.fn(() => Promise.resolve([])),
-                })),
-              })),
-            })),
-          })),
-        })),
-      }));
+      const mockSelect = vi.fn(() => chainable([]));
       (db.select as any) = mockSelect;
 
       const userId = 'test-user-id';

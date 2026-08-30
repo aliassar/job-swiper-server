@@ -307,6 +307,25 @@ export const workflowService = {
   },
 
   /**
+   * Record that a generation attempt has just started.
+   *
+   * Triggering n8n does not by itself change anything the UI can observe: the
+   * workflow row keeps whatever status and updatedAt it already had. After a
+   * retry that meant the card still read "Generation failed", because the
+   * stored attempt was still the stale one from days earlier. Stamping the row
+   * here is what turns the button into "Generating...", and starts the fifteen
+   * minute clock that turns it back into a failure if nothing comes back.
+   *
+   * Creates the workflow row when none exists, so a retry works even for an
+   * application that never had one.
+   */
+  async markGenerationStarted(userId: string, applicationId: string, jobId: string): Promise<void> {
+    const existing = await this.getWorkflowByApplication(applicationId);
+    const run = existing ?? await this.createWorkflowRun(userId, applicationId, jobId);
+    await this.updateWorkflowStatus(run.id, 'generating_resume');
+  },
+
+  /**
    * Process workflow - main orchestration logic
    */
   async processWorkflow(workflowRunId: string): Promise<void> {

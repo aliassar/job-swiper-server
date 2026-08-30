@@ -136,6 +136,7 @@ applications.post('/bulk/regenerate', async (c) => {
       const application = await applicationService.getApplicationById(auth.userId, id);
       const result = await workflowService.triggerN8nDocumentGeneration(auth.userId, application.jobId, id);
       if (!result.success) throw new Error(result.error || 'Failed to trigger document generation');
+      await workflowService.markGenerationStarted(auth.userId, id, application.jobId);
     })
   );
 
@@ -410,6 +411,10 @@ applications.post('/:id/regenerate', validateUuidParam('id'), async (c) => {
   if (!result.success) {
     throw new ValidationError(result.error || 'Failed to trigger document generation');
   }
+
+  // Stamp the workflow as freshly in flight so the card shows "Generating..."
+  // instead of the stale failure it was showing a moment ago.
+  await workflowService.markGenerationStarted(auth.userId, applicationId, application.jobId);
 
   return c.json(formatResponse(true, { message: 'Document regeneration triggered' }, null, requestId));
 });

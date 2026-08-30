@@ -64,6 +64,17 @@ export function deriveGenerationState(
     return { state: 'failed', startedAt, error: workflowError || 'Generation failed' };
   }
 
+  // A cancelled run produced nothing and will not be retried automatically.
+  // Reporting it rather than falling through to 'idle' keeps the card honest -
+  // showing no buttons at all reads as "never requested".
+  if (workflowStatus === 'cancelled') {
+    return {
+      state: 'failed',
+      startedAt,
+      error: workflowError ? `Generation was cancelled (${workflowError})` : 'Generation was cancelled',
+    };
+  }
+
   if (workflowStatus && IN_PROGRESS_STATUSES.has(workflowStatus)) {
     const age = startedAt ? now - new Date(startedAt).getTime() : 0;
     if (age > GENERATION_TIMEOUT_MS) {
