@@ -16,6 +16,39 @@ function isDatabaseError(error: unknown): error is { code?: string; constraint?:
 }
 
 /**
+ * Hides a pending job when the same user already rejected or accepted an earlier
+ * copy of it - same normalized company + title, on any platform.
+ *
+ * Reposts pass the insert-time dedup legitimately: they carry a new posted date
+ * and the old copy is older than its 42-day window. But over 30 days, 803 of 856
+ * such same-platform repeats were copies of a job the user had already decided,
+ * 689 of them rejected, so each one reappeared as a job to swipe again. That is a
+ * per-user judgement, which is why it lives here rather than in the shared trigger.
+ *
+ * Matches across platforms, because the same ad on Indeed and on LinkedIn is one
+ * job to apply to: 207 of 298 duplicate applications were cross-platform. Over the
+ * last 30 days and 4,941 swipes, restricting the match to one platform would have
+ * suppressed 1,053 repeat swipes (21.3%) and matching across all of them suppresses
+ * 1,457 (29.5%) - 404 more. The anti-join costs ~70ms; the ~1s in this query is the
+ * blocked-company scan above, not this clause.
+ *
+ * Reads jobs.dedup_key, a stored generated column (migration 0024). Computing the
+ * normalizers per row instead doubled this query to ~2s; the stored key keeps it
+ * at ~1s. Skipped jobs do not count as decided - skipping means "show me again
+ * later".
+ */
+function alreadyDecidedRepost(userId: string): SQL<unknown> {
+  return sql`NOT EXISTS (
+    SELECT 1 FROM jobs prior
+    JOIN user_job_status decided ON decided.job_id = prior.id
+    WHERE decided.user_id = ${userId}
+      AND decided.status IN ('rejected', 'accepted')
+      AND prior.dedup_key = ${jobs}.dedup_key
+      AND prior.id <> ${jobs.id}
+  )`;
+}
+
+/**
  * Austrian and Swiss locations to keep out of the swipe feed.
  *
  * One alternation rather than one predicate per city: the blocked-company
@@ -36,6 +69,29 @@ const EXCLUDED_LOCATION_PATTERN =
   '\\m(wien|vienna|austria|österreich|oesterreich|graz|salzburg|linz|innsbruck|klagenfurt' +
   '|switzerland|schweiz|zentralschweiz|suisse|svizzera|zürich|zurich|basel|bern|genf' +
   '|geneva|genève|lausanne|luzern|lucerne|lugano|winterthur|st\\. gallen)\\M';
+
+/** What the n8n custom-job webhook writes to src_name for a job you added by hand. */
+const MANUAL_SRC_NAME = 'Manual';
+
+/**
+ * Feed order: jobs you added yourself first, newest submission first, then
+ * everything else by posted date.
+ *
+ * A custom job carries the ad's real posted date, not the date you submitted it,
+ * and those are often far apart - the Mercor job was posted two months before it
+ * was added. Ordering the feed by posted_date alone therefore buries the job you
+ * just typed in behind every fresh scrape, which is the opposite of why you typed
+ * it in.
+ *
+ * The first key separates the two groups so they never interleave, which lets the
+ * second key read created_at for manual jobs and posted_date for the rest. No
+ * NULLS clause: a NULL sorts first under DESC, exactly as it does today for the
+ * scraped jobs with no posted date.
+ */
+const FEED_ORDER: SQL<unknown>[] = [
+  sql`CASE WHEN ${jobs.srcName} = ${MANUAL_SRC_NAME} THEN 0 ELSE 1 END`,
+  sql`CASE WHEN ${jobs.srcName} = ${MANUAL_SRC_NAME} THEN ${jobs.createdAt} ELSE ${jobs.postedDate} END DESC`,
+];
 
 export const jobService = {
   /**
@@ -126,6 +182,9 @@ export const jobService = {
       sql`(${jobs.location} IS NULL OR ${jobs.location} !~* ${EXCLUDED_LOCATION_PATTERN})`
     );
 
+    // Hide reposts of jobs this user already rejected or accepted.
+    conditions.push(alreadyDecidedRepost(userId));
+
     // Add search if provided (case-insensitive)
     if (search) {
       const lowerSearch = prepareCaseInsensitiveSearch(search);
@@ -158,7 +217,7 @@ export const jobService = {
     // Apply all conditions at once
     const query = baseQuery.where(and(...conditions));
 
-    const results = await query.orderBy(desc(jobs.postedDate)).limit(limit).offset(offset);
+    const results = await query.orderBy(...FEED_ORDER).limit(limit).offset(offset);
 
     // Get total count of remaining jobs with the same filters
     // Build count conditions (same as the main query)
@@ -178,6 +237,9 @@ export const jobService = {
     countConditions.push(
       sql`(${jobs.location} IS NULL OR ${jobs.location} !~* ${EXCLUDED_LOCATION_PATTERN})`
     );
+
+    // Must stay identical to the page query's repost clause above.
+    countConditions.push(alreadyDecidedRepost(userId));
 
     if (search) {
       const lowerSearch = prepareCaseInsensitiveSearch(search);

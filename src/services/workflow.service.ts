@@ -14,6 +14,40 @@ import { extractS3KeyFromUrl } from '../lib/utils.js';
 
 export type WorkflowStatus = 'pending' | 'generating_resume' | 'generating_cover_letter' | 'waiting_cv_verification' | 'waiting_message_verification' | 'applying' | 'completed' | 'failed' | 'cancelled';
 
+/**
+ * The job text the n8n Customizer tailors against.
+ *
+ * That workflow reads exactly one job field - body.job.description feeds both
+ * "JD Deconstruction" (which derives the structured skills the resume is built
+ * from) and "Cover Letter writer". It never looks at shortDescription,
+ * requirements, benefits or requiredSkills, so a job with an empty description
+ * produces an untailored copy of the base resume with no error anywhere.
+ *
+ * That is exactly what happened to every custom job, whose description was
+ * stored empty by the custom-job workflow, and it still affects 91 scraped jobs
+ * (Glassdoor 69, StepStone 19, Xing 3). Falling back to the fields that do
+ * survive keeps the generator working instead of silently returning the
+ * original.
+ */
+function jobDescriptionForGeneration(job: {
+  description: string | null;
+  shortDescription: string | null;
+  requirements: string | null;
+  benefits: string | null;
+}): string | null {
+  if (job.description && job.description.trim()) {
+    return job.description;
+  }
+
+  const sections = [
+    job.shortDescription,
+    job.requirements ? `Requirements:\n${job.requirements}` : null,
+    job.benefits ? `Benefits:\n${job.benefits}` : null,
+  ].filter((section): section is string => Boolean(section && section.trim()));
+
+  return sections.length > 0 ? sections.join('\n\n') : null;
+}
+
 export const workflowService = {
   /**
    * Create a new workflow run
@@ -128,7 +162,7 @@ export const workflowService = {
           position: jobDetails.position,
           location: jobDetails.location,
           salary: jobDetails.salary,
-          description: jobDetails.description,
+          description: jobDescriptionForGeneration(jobDetails),
           shortDescription: jobDetails.shortDescription,
           requiredSkills: jobDetails.requiredSkills,
           optionalSkills: jobDetails.optionalSkills,
