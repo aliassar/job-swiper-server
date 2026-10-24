@@ -28,7 +28,7 @@ const statusUpdateSchema = z.object({
     'Rejected',
     'Withdrawn',
   ]),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string(),
 });
 
@@ -74,7 +74,7 @@ webhooks.post('/status-update', async (c) => {
   const validated = statusUpdateSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid webhook payload', validated.error.errors);
+    throw new ValidationError('Invalid webhook payload', validated.error.issues);
   }
 
   const data: StatusUpdateWebhook = validated.data;
@@ -111,7 +111,7 @@ webhooks.post('/generation-complete', async (c) => {
   const validated = generationCompleteSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid webhook payload', validated.error.errors);
+    throw new ValidationError('Invalid webhook payload', validated.error.issues);
   }
 
   const data: GenerationCompleteWebhook = validated.data;
@@ -162,7 +162,7 @@ webhooks.post('/application-submitted', async (c) => {
   const validated = applicationSubmittedSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid webhook payload', validated.error.errors);
+    throw new ValidationError('Invalid webhook payload', validated.error.issues);
   }
 
   const data: ApplicationSubmittedWebhook = validated.data;

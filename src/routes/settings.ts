@@ -67,7 +67,7 @@ settings.put('/', async (c) => {
   const validated = updateSettingsSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   // Ensure settings exist

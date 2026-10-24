@@ -50,7 +50,7 @@ auth.post('/register', async (c) => {
   const validated = registerSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   try {
@@ -85,7 +85,7 @@ auth.post('/login', async (c) => {
   const validated = loginSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const { user, token } = await authService.login(
@@ -114,7 +114,7 @@ auth.post('/verify-email', async (c) => {
   const validated = verifyEmailSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   await authService.verifyEmail(validated.data.token);
@@ -192,7 +192,7 @@ auth.post('/forgot-password', async (c) => {
   const validated = forgotPasswordSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   await authService.requestPasswordReset(validated.data.email, requestId);
@@ -215,7 +215,7 @@ auth.post('/reset-password', async (c) => {
   const validated = resetPasswordSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   await authService.resetPassword(validated.data.token, validated.data.newPassword);
@@ -527,7 +527,7 @@ auth.post('/refresh', async (c) => {
 
   try {
     // Verify the existing token (this will fail if completely expired)
-    const payload = await verify(token, jwtSecret);
+    const payload = await verify(token, jwtSecret, 'HS256');
 
     if (!payload || !payload.userId) {
       return c.json(formatResponse(false, null, {
@@ -588,7 +588,7 @@ auth.post('/exchange', async (c) => {
   const validated = exchangeSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const { user, token } = await authService.exchangeOAuthToken(

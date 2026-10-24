@@ -79,8 +79,8 @@ applicationHistory.get('/export', async (c) => {
 // Download resume or cover letter for an application
 applicationHistory.get('/:applicationId/download/:type', async (c) => {
   const auth = c.get('auth');
-  const applicationId = c.req.param('applicationId');
-  const type = c.req.param('type'); // 'resume' or 'cover-letter'
+  const applicationId = c.req.param('applicationId')!;
+  const type = c.req.param('type')!; // 'resume' or 'cover-letter'
 
   if (!['resume', 'cover-letter'].includes(type)) {
     throw new ValidationError('Invalid type. Must be "resume" or "cover-letter".');

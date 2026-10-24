@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 import { logger } from '../middleware/logger.js';
 
 const SMTP_HOST = process.env.SMTP_HOST || '';
@@ -15,7 +15,7 @@ interface EmailOptions {
 }
 
 class EmailClient {
-  private transporter: nodemailer.Transporter | null = null;
+  private transporter: Transporter | null = null;
 
   constructor() {
     if (SMTP_HOST && SMTP_USER && SMTP_PASS) {

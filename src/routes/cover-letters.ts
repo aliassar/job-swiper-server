@@ -20,7 +20,7 @@ coverLetters.get('/', async (c) => {
 coverLetters.get('/:id', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const coverLetterId = c.req.param('id');
+  const coverLetterId = c.req.param('id')!;
 
   const coverLetter = await coverLetterService.getCoverLetterById(auth.userId, coverLetterId);
 
@@ -31,7 +31,7 @@ coverLetters.get('/:id', validateUuidParam('id'), async (c) => {
 coverLetters.patch('/:id/reference', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const coverLetterId = c.req.param('id');
+  const coverLetterId = c.req.param('id')!;
 
   const coverLetter = await coverLetterService.setReference(auth.userId, coverLetterId);
 

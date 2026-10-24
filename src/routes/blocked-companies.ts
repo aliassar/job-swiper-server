@@ -37,7 +37,7 @@ blockedCompanies.get('/', async (c) => {
 blockedCompanies.delete('/:companyName', async (c) => {
     const auth = c.get('auth');
     const requestId = c.get('requestId');
-    const companyName = decodeURIComponent(c.req.param('companyName'));
+    const companyName = decodeURIComponent(c.req.param('companyName')!);
 
     await jobService.unblockCompany(auth.userId, companyName);
 

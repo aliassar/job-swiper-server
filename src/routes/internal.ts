@@ -31,7 +31,7 @@ internal.use('*', async (c, next) => {
  * Get user profile data for document generation
  */
 internal.get('/user-profile/:userId', async (c) => {
-    const userId = c.req.param('userId');
+    const userId = c.req.param('userId')!;
     const requestId = crypto.randomUUID();
 
     const profile = await db
@@ -68,7 +68,7 @@ internal.get('/user-profile/:userId', async (c) => {
  * Get job details for document generation
  */
 internal.get('/job/:jobId', async (c) => {
-    const jobId = c.req.param('jobId');
+    const jobId = c.req.param('jobId')!;
     const requestId = crypto.randomUUID();
 
     const job = await db

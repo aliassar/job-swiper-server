@@ -104,7 +104,7 @@ applications.post('/bulk/delete', async (c) => {
   const body = await c.req.json();
   const validated = bulkIdsSchema.safeParse(body);
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const results = await Promise.allSettled(
@@ -128,7 +128,7 @@ applications.post('/bulk/regenerate', async (c) => {
   const body = await c.req.json();
   const validated = bulkIdsSchema.safeParse(body);
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const results = await Promise.allSettled(
@@ -157,7 +157,7 @@ applications.post('/bulk/archive', async (c) => {
   const body = await c.req.json();
   const validated = bulkIdsSchema.safeParse(body);
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const results = await Promise.allSettled(
@@ -181,7 +181,7 @@ applications.post('/bulk/save-for-later', async (c) => {
   const body = await c.req.json();
   const validated = bulkIdsSchema.safeParse(body);
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const results = await Promise.allSettled(
@@ -210,7 +210,7 @@ applications.post('/bulk/save-for-later', async (c) => {
 applications.get('/:id', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const application = await applicationService.getApplicationDetails(auth.userId, applicationId);
 
@@ -232,13 +232,13 @@ applications.get('/:id', validateUuidParam('id'), async (c) => {
 applications.put('/:id/stage', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const body = await c.req.json();
   const validated = updateStageSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const application = await applicationService.updateApplicationStage(
@@ -265,13 +265,13 @@ applications.put('/:id/stage', validateUuidParam('id'), async (c) => {
 applications.put('/:id/notes', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const body = await c.req.json();
   const validated = updateNotesSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const application = await applicationService.updateApplicationNotes(
@@ -288,7 +288,7 @@ applications.put('/:id/notes', validateUuidParam('id'), async (c) => {
 // GET /api/applications/:id/download/resume - Download generated resume
 applications.get('/:id/download/resume', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const application = await applicationService.getApplicationDetails(auth.userId, applicationId);
 
@@ -306,7 +306,7 @@ applications.get('/:id/download/resume', validateUuidParam('id'), async (c) => {
 // GET /api/applications/:id/download/cover-letter - Download cover letter
 applications.get('/:id/download/cover-letter', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const application = await applicationService.getApplicationDetails(auth.userId, applicationId);
 
@@ -325,7 +325,7 @@ applications.get('/:id/download/cover-letter', validateUuidParam('id'), async (c
 applications.post('/:id/toggle-auto-status', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const application = await applicationService.toggleAutoStatus(auth.userId, applicationId);
 
@@ -336,7 +336,7 @@ applications.post('/:id/toggle-auto-status', validateUuidParam('id'), async (c) 
 applications.get('/:id/documents', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const application = await applicationService.getApplicationDetails(auth.userId, applicationId);
 
@@ -362,13 +362,13 @@ applications.get('/:id/documents', validateUuidParam('id'), async (c) => {
 applications.put('/:id/documents', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const body = await c.req.json();
   const validated = updateDocumentsSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const application = await applicationService.updateCustomDocuments(
@@ -385,7 +385,7 @@ applications.put('/:id/documents', validateUuidParam('id'), async (c) => {
 applications.delete('/:id', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const result = await applicationService.deleteApplication(auth.userId, applicationId);
 
@@ -396,7 +396,7 @@ applications.delete('/:id', validateUuidParam('id'), async (c) => {
 applications.post('/:id/regenerate', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   // Get application to find the jobId
   const application = await applicationService.getApplicationById(auth.userId, applicationId);
@@ -423,7 +423,7 @@ applications.post('/:id/regenerate', validateUuidParam('id'), async (c) => {
 applications.post('/:id/archive', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const result = await applicationService.toggleArchive(auth.userId, applicationId);
 
@@ -434,7 +434,7 @@ applications.post('/:id/archive', validateUuidParam('id'), async (c) => {
 applications.post('/:id/save-for-later', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const applicationId = c.req.param('id');
+  const applicationId = c.req.param('id')!;
 
   const result = await applicationService.toggleSaveForLater(auth.userId, applicationId);
 

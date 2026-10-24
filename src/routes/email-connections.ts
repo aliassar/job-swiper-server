@@ -148,7 +148,7 @@ emailConnections.post('/imap', async (c) => {
   const validated = addImapSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const { email, host, port, username, password } = validated.data;
@@ -176,7 +176,7 @@ emailConnections.post('/imap', async (c) => {
 emailConnections.delete('/:id', async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const connectionId = c.req.param('id');
+  const connectionId = c.req.param('id')!;
 
   await emailConnectionService.removeConnection(auth.userId, connectionId);
 
@@ -187,7 +187,7 @@ emailConnections.delete('/:id', async (c) => {
 emailConnections.post('/:id/test', async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const connectionId = c.req.param('id');
+  const connectionId = c.req.param('id')!;
 
   const isValid = await emailConnectionService.testConnection(auth.userId, connectionId);
 
@@ -209,7 +209,7 @@ emailConnections.post('/:id/test', async (c) => {
 emailConnections.post('/:id/sync', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const connectionId = c.req.param('id');
+  const connectionId = c.req.param('id')!;
 
   try {
     // Get the email connection

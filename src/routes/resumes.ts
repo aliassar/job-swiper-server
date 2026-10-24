@@ -44,7 +44,7 @@ resumes.post('/', async (c) => {
 resumes.get('/:id', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const resumeId = c.req.param('id');
+  const resumeId = c.req.param('id')!;
 
   const resume = await resumeService.getResumeById(auth.userId, resumeId);
 
@@ -55,7 +55,7 @@ resumes.get('/:id', validateUuidParam('id'), async (c) => {
 resumes.delete('/:id', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const resumeId = c.req.param('id');
+  const resumeId = c.req.param('id')!;
 
   await resumeService.deleteResume(auth.userId, resumeId);
 
@@ -68,7 +68,7 @@ resumes.delete('/:id', validateUuidParam('id'), async (c) => {
 resumes.patch('/:id/primary', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const resumeId = c.req.param('id');
+  const resumeId = c.req.param('id')!;
 
   const resume = await resumeService.setPrimary(auth.userId, resumeId);
 
@@ -79,7 +79,7 @@ resumes.patch('/:id/primary', validateUuidParam('id'), async (c) => {
 resumes.patch('/:id/reference', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const resumeId = c.req.param('id');
+  const resumeId = c.req.param('id')!;
 
   const resume = await resumeService.setReference(auth.userId, resumeId);
 

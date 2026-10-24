@@ -87,7 +87,7 @@ userProfile.put('/', async (c) => {
   const validated = updateProfileSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   // Get or create profile

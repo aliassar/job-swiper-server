@@ -123,7 +123,7 @@ jobs.get('/skipped', async (c) => {
 jobs.post('/:id/accept', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   let metadata: { automaticApply?: boolean } | undefined;
 
@@ -133,7 +133,7 @@ jobs.post('/:id/accept', validateUuidParam('id'), async (c) => {
     const validated = acceptJobSchema.safeParse(body);
 
     if (!validated.success) {
-      throw new ValidationError('Invalid request body', validated.error.errors);
+      throw new ValidationError('Invalid request body', validated.error.issues);
     }
 
     metadata = validated.data;
@@ -167,7 +167,7 @@ jobs.post('/:id/accept', validateUuidParam('id'), async (c) => {
 jobs.post('/:id/reject', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   const job = await jobService.updateJobStatus(auth.userId, jobId, 'rejected', 'rejected');
 
@@ -186,7 +186,7 @@ jobs.post('/:id/reject', validateUuidParam('id'), async (c) => {
 jobs.post('/:id/skip', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   const job = await jobService.updateJobStatus(auth.userId, jobId, 'skipped', 'skipped');
 
@@ -205,7 +205,7 @@ jobs.post('/:id/skip', validateUuidParam('id'), async (c) => {
 jobs.post('/:id/save', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   const job = await jobService.toggleSave(auth.userId, jobId);
 
@@ -224,7 +224,7 @@ jobs.post('/:id/save', validateUuidParam('id'), async (c) => {
 jobs.delete('/:id/save', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   const job = await jobService.unsave(auth.userId, jobId);
 
@@ -243,7 +243,7 @@ jobs.delete('/:id/save', validateUuidParam('id'), async (c) => {
 jobs.post('/:id/rollback', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   const result = await jobService.rollbackJob(auth.userId, jobId);
 
@@ -266,13 +266,13 @@ jobs.post('/:id/rollback', validateUuidParam('id'), async (c) => {
 jobs.post('/:id/report', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   const body = await c.req.json();
   const validated = reportJobSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const report = await jobService.reportJob(
@@ -298,7 +298,7 @@ jobs.post('/:id/report', validateUuidParam('id'), async (c) => {
 jobs.post('/:id/unreport', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   await jobService.unreportJob(auth.userId, jobId);
 

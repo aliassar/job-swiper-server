@@ -18,13 +18,13 @@ const generateResumeSchema = z.object({
 generation.post('/jobs/:id/generate/resume', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   const body = await c.req.json();
   const validated = generateResumeSchema.safeParse(body);
 
   if (!validated.success) {
-    throw new ValidationError('Invalid request body', validated.error.errors);
+    throw new ValidationError('Invalid request body', validated.error.issues);
   }
 
   const resume = await generationService.generateResume(
@@ -41,7 +41,7 @@ generation.post('/jobs/:id/generate/resume', validateUuidParam('id'), async (c) 
 generation.post('/jobs/:id/generate/cover-letter', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const jobId = c.req.param('id');
+  const jobId = c.req.param('id')!;
 
   const coverLetter = await generationService.generateCoverLetter(
     auth.userId,
@@ -76,7 +76,7 @@ generation.get('/generated/cover-letters', async (c) => {
 generation.get('/generated/resumes/:id/download', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const resumeId = c.req.param('id');
+  const resumeId = c.req.param('id')!;
 
   const resume = await generationService.getGeneratedResumeById(auth.userId, resumeId);
 
@@ -94,7 +94,7 @@ generation.get('/generated/resumes/:id/download', validateUuidParam('id'), async
 generation.get('/generated/cover-letters/:id/download', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const coverLetterId = c.req.param('id');
+  const coverLetterId = c.req.param('id')!;
 
   const coverLetter = await generationService.getGeneratedCoverLetterById(auth.userId, coverLetterId);
 

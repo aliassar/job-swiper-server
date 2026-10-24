@@ -31,7 +31,7 @@ export function validateParam(paramName: string, schema: z.ZodSchema) {
     if (!result.success) {
       throw new ValidationError(
         `Invalid ${paramName} format`,
-        { errors: result.error.errors }
+        { errors: result.error.issues }
       );
     }
     

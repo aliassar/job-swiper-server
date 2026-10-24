@@ -136,7 +136,7 @@ notifications.get('/stream', async (c) => {
 notifications.post('/:id/read', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const notificationId = c.req.param('id');
+  const notificationId = c.req.param('id')!;
 
   await notificationService.markAsRead(auth.userId, notificationId);
 
@@ -173,7 +173,7 @@ notifications.post('/read-all', async (c) => {
 notifications.delete('/:id', validateUuidParam('id'), async (c) => {
   const auth = c.get('auth');
   const requestId = c.get('requestId');
-  const notificationId = c.req.param('id');
+  const notificationId = c.req.param('id')!;
 
   await notificationService.deleteNotification(auth.userId, notificationId);
 
