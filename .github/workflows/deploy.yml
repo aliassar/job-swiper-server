@@ -1,6 +1,6 @@
 # Every push to main: the server (194.163.148.222) builds this commit into a Docker image and swaps the running
 # backend (swiper.applyflo.me/backend) container, keeping the old one if the build or its health check fails.
-# The SSH key in DEPLOY_SSH_KEY can only run infra/server/ssh-deploy there (a forced command in the ApplyFlow repo),
+# The SSH key in DEPLOY_SSH_KEY can only run infra/ssh-deploy there (a forced command in this repo),
 # which deploys commits on main only. DEPLOY_KNOWN_HOSTS pins the server's host key.
 name: Deploy
 
@@ -29,4 +29,4 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes root@194.163.148.222 "old-server $SHA"
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes root@194.163.148.222 "server $SHA"

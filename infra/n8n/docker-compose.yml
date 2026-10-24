@@ -1,0 +1,64 @@
+# n8n for Job Swiper's resume generation (https://n8n.applyflo.me through Caddy) with its own Postgres. One process
+# in regular mode: a queue worker and Redis would cost ~1 GB for no benefit at this volume. Not backed up.
+# Secrets (N8N_ENCRYPTION_KEY, database password) in /etc/old-swiper/n8n.env and n8n-db.env, root only.
+#   docker compose -p n8n -f /opt/old-swiper/server/infra/n8n/docker-compose.yml up -d
+name: n8n
+
+services:
+  n8n:
+    image: n8nio/n8n:2.44.6
+    env_file: /etc/old-swiper/n8n.env
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: db
+      DB_POSTGRESDB_PORT: '5432'
+      EXECUTIONS_MODE: regular
+      N8N_HOST: n8n.applyflo.me
+      N8N_PROTOCOL: https
+      N8N_PORT: '5678'
+      N8N_EDITOR_BASE_URL: https://n8n.applyflo.me/
+      WEBHOOK_URL: https://n8n.applyflo.me/
+      N8N_PROXY_HOPS: '1'
+      N8N_RUNNERS_ENABLED: 'true'
+      # Keep a week of executions, at most 2,000, so the database and memory stay small.
+      EXECUTIONS_DATA_PRUNE: 'true'
+      EXECUTIONS_DATA_MAX_AGE: '168'
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: '2000'
+      N8N_DIAGNOSTICS_ENABLED: 'false'
+      N8N_VERSION_NOTIFICATIONS_ENABLED: 'false'
+      N8N_PERSONALIZATION_ENABLED: 'false'
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: 'true'
+      NODE_OPTIONS: --max-old-space-size=384
+      GENERIC_TIMEZONE: Europe/Berlin
+    ports: ['127.0.0.1:5678:5678']
+    volumes: ['n8n:/home/node/.n8n']
+    depends_on:
+      db: { condition: service_healthy }
+    restart: unless-stopped
+    mem_limit: 640m
+    # Used now and then (resume generation): one CPU at most, so it never crowds out the other stacks on the server.
+    cpus: 1
+    logging: &logs
+      driver: json-file
+      options: { max-size: 10m, max-file: '3' }
+
+  db:
+    image: postgres:17-alpine
+    env_file: /etc/old-swiper/n8n-db.env
+    command: >-
+      postgres -c shared_buffers=48MB -c effective_cache_size=128MB -c work_mem=4MB -c maintenance_work_mem=16MB
+      -c max_connections=30 -c max_wal_size=256MB -c autovacuum_max_workers=1
+    volumes: ['db:/var/lib/postgresql/data']
+    restart: unless-stopped
+    mem_limit: 192m
+    shm_size: 64m
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logs
+
+volumes:
+  n8n: {}
+  db: {}

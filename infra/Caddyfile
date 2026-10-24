@@ -1,0 +1,25 @@
+# Job Swiper's sites, installed to /etc/caddy/sites/old-swiper.caddy (the server's main Caddyfile imports
+# /etc/caddy/sites/*.caddy). Caddy gets and renews the certificates itself.
+
+# The frontend, with this backend under /backend.
+swiper.applyflo.me {
+	encode zstd gzip
+	handle_path /backend/* {
+		reverse_proxy 127.0.0.1:5101 {
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3101
+	}
+	header Strict-Transport-Security "max-age=31536000"
+}
+
+# n8n (infra/n8n): its own sign-in; webhooks under /webhook/.
+n8n.applyflo.me {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:5678 {
+		flush_interval -1
+	}
+	header Strict-Transport-Security "max-age=31536000"
+}

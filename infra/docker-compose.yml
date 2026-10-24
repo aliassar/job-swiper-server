@@ -1,0 +1,61 @@
+# Job Swiper on the server (https://swiper.applyflo.me through Caddy): its Next.js frontend, this Hono backend (served
+# under /backend on the same host) and its own Postgres. Built from the checkouts in /opt/old-swiper/{frontend,server}
+# of github.com/aliassar/job-swiper and job-swiper-server; their GitHub Actions deploy on push (infra/deploy.sh).
+# Not backed up. Secrets in /etc/old-swiper/{server,frontend,db}.env, root only.
+#   docker compose -p old-swiper -f /opt/old-swiper/server/infra/docker-compose.yml up -d
+name: old-swiper
+
+services:
+  frontend:
+    image: old-swiper-frontend:${FRONTEND_TAG:-latest}
+    build:
+      context: /opt/old-swiper/frontend
+      args: { NEXT_PUBLIC_API_URL: https://swiper.applyflo.me/backend }
+    env_file: /etc/old-swiper/frontend.env
+    environment:
+      NODE_OPTIONS: --max-old-space-size=128
+    ports: ['127.0.0.1:3101:3000']
+    restart: unless-stopped
+    mem_limit: 192m
+    logging: &logs
+      driver: json-file
+      options: { max-size: 10m, max-file: '3' }
+
+  server:
+    image: old-swiper-server:${SERVER_TAG:-latest}
+    build:
+      context: /opt/old-swiper/server
+    env_file: /etc/old-swiper/server.env
+    environment:
+      NODE_ENV: production
+      PORT: '5000'
+      # Pending timers checked once a minute instead of every 5 s (each check is a database query).
+      ENABLE_TIMER_PROCESSING: 'true'
+      TIMER_INTERVAL_MS: '60000'
+      NODE_OPTIONS: --max-old-space-size=128
+    ports: ['127.0.0.1:5101:5000']
+    depends_on:
+      db: { condition: service_healthy }
+    restart: unless-stopped
+    mem_limit: 192m
+    logging: *logs
+
+  db:
+    image: postgres:17-alpine
+    env_file: /etc/old-swiper/db.env
+    command: >-
+      postgres -c shared_buffers=48MB -c effective_cache_size=128MB -c work_mem=4MB -c maintenance_work_mem=16MB
+      -c max_connections=30 -c max_wal_size=256MB -c autovacuum_max_workers=1
+    volumes: ['db:/var/lib/postgresql/data']
+    restart: unless-stopped
+    mem_limit: 192m
+    shm_size: 64m
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logs
+
+volumes:
+  db: {}

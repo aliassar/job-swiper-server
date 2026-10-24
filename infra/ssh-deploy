@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Forced command for Job Swiper's deploy key (authorized_keys: command="/opt/old-swiper/server/infra/ssh-deploy",restrict …):
+# the key can run infra/deploy.sh for the server or the frontend at a commit on main, and nothing else.
+set -euo pipefail
+read -r project sha extra <<< "${SSH_ORIGINAL_COMMAND:-}"
+[[ "$project" =~ ^(server|frontend)$ && "$sha" =~ ^[0-9a-f]{40}$ && -z "${extra:-}" ]] || { echo "usage: server|frontend <40-char sha>" >&2; exit 2; }
+exec /opt/old-swiper/server/infra/deploy.sh "$project" "$sha"
