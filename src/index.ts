@@ -46,9 +46,9 @@ app.get('/', (c) => {
 // Error handler
 app.onError(errorHandler);
 
-// Start local development server if not in serverless environment
-// This allows running the server locally with: npm run dev
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+// Start the HTTP server unless running as Vercel functions (locally with `npm run dev`, or in the Docker
+// container on the server)
+if (!process.env.VERCEL) {
   const { serve } = await import('@hono/node-server');
   const port = parseInt(process.env.PORT || '5000', 10);
 
@@ -61,27 +61,19 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
 }
 
 // Start automatic timer processing if enabled
-// Set ENABLE_TIMER_PROCESSING=true for long-running servers (Railway, Render, etc.)
+// Set ENABLE_TIMER_PROCESSING=true for long-running servers; TIMER_INTERVAL_MS sets how often pending timers
+// are checked (default 5 s; every check is a database query, so a server with few timers can use 60000).
 // For serverless (Vercel, Lambda), use external cron to call POST /api/sync/timers
-if (process.env.ENABLE_TIMER_PROCESSING === 'true') {
-  console.log('⏰ Starting automatic timer processing...');
+const timerIntervalMs = Math.max(1000, parseInt(process.env.TIMER_INTERVAL_MS || '5000', 10) || 5000);
+if (process.env.ENABLE_TIMER_PROCESSING === 'true' || process.env.NODE_ENV !== 'production') {
+  console.log(`⏰ Starting automatic timer processing (every ${timerIntervalMs} ms)...`);
   setInterval(async () => {
     try {
       await timerService.processPendingTimers();
     } catch (error) {
       console.error('Error processing timers:', error);
     }
-  }, 5000); // Check every 5 seconds
-} else if (process.env.NODE_ENV !== 'production') {
-  // Always enable in development
-  console.log('⏰ Starting automatic timer processing (dev mode)...');
-  setInterval(async () => {
-    try {
-      await timerService.processPendingTimers();
-    } catch (error) {
-      console.error('Error processing timers:', error);
-    }
-  }, 5000);
+  }, timerIntervalMs);
 }
 
 export default app;
